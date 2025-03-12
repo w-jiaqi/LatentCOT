@@ -12,6 +12,7 @@
 #SBATCH --output=/mmfs1/gscratch/ark/jiaqi/projects/LatentCOT/logs/%j.out
 #SBATCH --error=/mmfs1/gscratch/ark/jiaqi/projects/LatentCOT/logs/%j.err
 
+source /mmfs1/gscratch/ark/jiaqi/miniconda3/etc/profile.d/conda.sh
 conda activate latentcot
-cd /gscratch/ark/jiaqi/llama3_gsm8k
-python fine_tune_llama3_gsm8k.py
+cd /mmfs1/gscratch/ark/jiaqi/projects/LatentCOT
+python sft_NEFT.py
