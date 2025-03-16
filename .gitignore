@@ -2,3 +2,4 @@ env/
 get-pip.py
 hf_cache/
 models/
+ds_cache/
