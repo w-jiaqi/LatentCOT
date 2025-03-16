@@ -117,7 +117,7 @@ def process_cot_latent_dataset(example):
     }
 
 print("Processing latent dataset")
-cot_latent_dataset = base_dataset.map(process_cot_latent_dataset, remove_columns=base_dataset['train'].features, cache_file_names={'train':'ds_cache/cache_latent_train.arrow', 'test':'ds_cache/cache_latent_test.arrow'})
+cot_latent_dataset = base_dataset.map(process_cot_latent_dataset, remove_columns=base_dataset['train'].features, cache_file_names={'train':'4x4_multiplication_latent_train.arrow', 'test':'4x4_multiplication_latent_eval.arrow'})
 cot_latent_dataset.set_format("pt")
 
 pad_token_id = tokenizer.eos_token_id

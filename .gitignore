@@ -1,1 +1,4 @@
 env/
+get-pip.py
+hf_cache/
+models/

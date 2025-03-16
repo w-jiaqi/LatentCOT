@@ -18,7 +18,7 @@ from transformers import (
 from peft import LoraConfig, get_peft_model, TaskType
 from trl import SFTConfig, SFTTrainer, DataCollatorForCompletionOnlyLM
 
-sft_path = "./models/llama-3.2-1B-gsm8k-sft-final"
+sft_path = "./models/cot-sft/llama-3.2-1B-gsm8k-sft-final"
 model_name = "meta-llama/Llama-3.2-1B-Instruct"
 
 # load the dataset
@@ -39,13 +39,13 @@ def format_gsm8k_example(example):
 
     prompt = f"""Solve the following math problem step by step:
 
-{question}
+        {question}
 
-Think through this problem step by step:"""
+        Think through this problem step by step:"""
 
     completion = f"""{reasoning}
 
-Therefore, the answer is {final_answer}"""
+        Therefore, the answer is {final_answer}"""
 
     return {"prompt": prompt, "completion": completion}
 
@@ -75,6 +75,7 @@ trainer = SFTTrainer(
     peft_config=peft_config,
 )
 
+# TODO: CHECK IF THIS IS NECESSARY
 tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
 trainer.train()
