@@ -182,7 +182,7 @@ class LatentCOT(nn.Module):
 
         return loss
 
-checkpoint_dir = "checkpoint"
+checkpoint_dir = "./models/latent-cot-sft/llama-3.2-1B-multiplication-sft-final"
 
 optim = torch.optim.Adam(model.parameters(), lr=1e-5)
 
@@ -201,7 +201,7 @@ for epoch in range(epochs):
     for batch_idx, batch in enumerate(cot_latent_dataloader):
         loss = latent_cot_model(batch['input_ids'], batch['attention_mask'], batch['latent_tensor'], batch['latent_mask'])
 
-        print(f"Batch: {batch_idx}, Loss: {loss.item()}")
+        progress_bar.set_description(f"Batch: {batch_idx}, Loss: {loss.item()}")
         optim.zero_grad()
         loss.backward()
         optim.step()
