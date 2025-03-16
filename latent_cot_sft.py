@@ -44,7 +44,7 @@ print("Loading tokenizer")
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 print("Loading dataset")
-base_dataset = datasets.load_dataset("text", data_files={"train": "train.txt", "test": "valid.txt"})
+base_dataset = datasets.load_dataset("text", data_files={"train": "data/multiplication/4x4/train.txt", "test": "data/multiplication/4x4/valid.txt"})
 
 # TODO: MAKE SURE TO CHANGE THIS BACK LATER
 TRAIN_SIZE = 10000
