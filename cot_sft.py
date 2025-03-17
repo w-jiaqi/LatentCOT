@@ -20,7 +20,6 @@ print(
 
 
 def format_gsm8k_example(example):
-    """Format GSM8K examples into prompt-completion pairs"""
     question = example["question"]
     full_answer = example["answer"]
 
@@ -63,7 +62,20 @@ peft_config = LoraConfig(
     task_type="CAUSAL_LM",
 )
 
-training_args = SFTConfig(max_seq_length=2048, output_dir=sft_path, report_to="none", num_train_epochs=3, per_device_train_batch_size=8, gradient_accumulation_steps=2, gradient_checkpointing=True, optim="adamw_torch", learning_rate = 1e-4, logging_steps=10, weight_decay=0.01, warmup_steps=100, save_strategy="epoch")
+training_args = SFTConfig(max_seq_length=2048, 
+    output_dir=sft_path, 
+    report_to="none", 
+    num_train_epochs=3, 
+    per_device_train_batch_size=8, 
+    gradient_accumulation_steps=2, 
+    gradient_checkpointing=True, 
+    optim="adamw_torch", 
+    learning_rate = 1e-4, 
+    logging_steps=10, 
+    weight_decay=0.01, 
+    warmup_steps=100, 
+    save_strategy="epoch"
+)
 
 trainer = SFTTrainer(
     model_name,
