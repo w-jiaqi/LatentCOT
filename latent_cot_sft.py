@@ -68,13 +68,17 @@ def process_base_dataset(example):
 print("Processing dataset")
 base_dataset = base_dataset.map(process_base_dataset, remove_columns=base_dataset['train'].features)
 
+tokenizer.add_special_tokens({"pad_token":"<|pad|>"})
 tokenizer.add_tokens("<|begin_latent|>")
 tokenizer.add_tokens("<|end_latent|>")
 tokenizer.add_tokens("<|latent|>")
 
+pad_id = tokenizer.convert_tokens_to_ids("<|pad|>")
 begin_latent_id = tokenizer.convert_tokens_to_ids("<|begin_latent|>")
 end_latent_id = tokenizer.convert_tokens_to_ids("<|end_latent|>")
 latent_id = tokenizer.convert_tokens_to_ids("<|latent|>")
+
+model.config.pad_token_id=pad_id
 
 model.resize_token_embeddings(len(tokenizer))
 
