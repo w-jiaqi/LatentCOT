@@ -54,8 +54,8 @@ def format_multiplication_example_base_model(example):
     text = example["text"]
 
     question = text.split("||")[0].strip()
-    num_1 = question.split("*")[0]
-    num_2 = question.split("*")[1]
+    num_1 = question.split("*")[0].strip().replace(" ", "")
+    num_2 = question.split("*")[1].strip().replace(" ", "")
 
     # reversing the digits so it's more fair for the base model
     num_1 = int(num_1[::-1])
