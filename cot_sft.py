@@ -1,5 +1,7 @@
+import os
+import argparse
+import sys
 import torch
-from datasets import load_dataset
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -7,52 +9,34 @@ from transformers import (
     TrainingArguments,
 )
 from peft import LoraConfig, get_peft_model, TaskType
-from trl import SFTConfig, SFTTrainer, DataCollatorForCompletionOnlyLM
+from trl import SFTConfig, SFTTrainer, DataCollatorForCompletionOnlyLM, apply_chat_template
+from dataset import get_gsm8k_dataset, get_4x4_multiplication_dataset
 
-sft_path = "./models/cot-sft/llama-3.2-1B-gsm8k-sft-final"
-model_name = "meta-llama/Llama-3.2-1B-Instruct"
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--dataset", choices=['gsm8k', '4x4'], type=str, required=True)
+parser.add_argument("-m", "--model", type=str, default="meta-llama/Llama-3.2-1B-Instruct")
+parser.add_argument("--checkpoints_dir", type=str, default="checkpoints/cot-sft")
+parser.add_argument("--epochs", type=int, default=3)
+
+args = parser.parse_args()
+
+checkpoints_path = os.path.join(args.checkpoints_dir, args.dataset)
+model_name = args.model
+
+model = AutoModelForCausalLM.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 # load the dataset
-ds = load_dataset("openai/gsm8k", "main")
+ds = None
+
+if args.dataset == "gsm8k":
+    ds = get_gsm8k_dataset(tokenizer)
+elif args.dataset == "4x4":
+    ds = get_4x4_multiplication_dataset(tokenizer)
+
 print(
     f"Dataset loaded: {len(ds['train'])} training examples, {len(ds['test'])} test examples"
 )
-
-
-def format_gsm8k_example(example):
-    question = example["question"]
-    full_answer = example["answer"]
-
-    answer_parts = full_answer.split("####")
-    reasoning = answer_parts[0].strip()
-    final_answer = answer_parts[1].strip() if len(answer_parts) > 1 else ""
-
-    prompt = f"""Solve the following math problem step by step:
-
-        {question}
-
-        Think through this problem step by step:"""
-
-    completion = f"""{reasoning}
-
-        Therefore, the answer is {final_answer}"""
-
-    return {"prompt": prompt, "completion": completion}
-
-
-# format the dataset
-formatted_train_ds = ds["train"].map(format_gsm8k_example)
-formatted_test_ds = ds["test"].map(format_gsm8k_example)
-
-model = AutoModelForCausalLM.from_pretrained(model_name)
-
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-
-tokenizer.add_special_tokens({"pad_token":"<|pad|>"})
-model.resize_token_embeddings(len(tokenizer))
-pad_id = tokenizer.convert_tokens_to_ids("<|pad|>")
-
-model.config.pad_token_id=pad_id
 
 peft_config = LoraConfig(
     r=16,
@@ -62,28 +46,24 @@ peft_config = LoraConfig(
     task_type="CAUSAL_LM",
 )
 
-training_args = SFTConfig(max_seq_length=2048, 
-    output_dir=sft_path, 
-    report_to="none", 
-    num_train_epochs=3, 
-    per_device_train_batch_size=8, 
-    gradient_accumulation_steps=2, 
-    gradient_checkpointing=True, 
-    optim="adamw_torch", 
-    learning_rate = 1e-4, 
-    logging_steps=10, 
-    weight_decay=0.01, 
-    warmup_steps=100, 
+training_args = SFTConfig(max_seq_length=2048,
+    output_dir=checkpoints_path,
+    report_to="none",
+    num_train_epochs=args.epochs,
+    per_device_train_batch_size=8,
+    optim="adamw_torch",
+    learning_rate = 1e-4,
+    logging_steps=10,
+    weight_decay=0.01,
+    warmup_steps=100,
     save_strategy="epoch"
 )
 
 trainer = SFTTrainer(
     model_name,
-    train_dataset=formatted_train_ds,
+    train_dataset=ds['train'],
     args=training_args,
     peft_config=peft_config,
 )
 
 trainer.train()
-
-trainer.save_model()
