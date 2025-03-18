@@ -24,7 +24,7 @@ generator = pipeline(
 	"text-generation",
 	model=args.base_model,
 	torch_dtype=args.dtype,
-	device_map=args.device_map
+	device_map=args.device
 )
 
 messages = [
