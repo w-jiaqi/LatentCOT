@@ -20,9 +20,12 @@ base_model = AutoModelForCausalLM.from_pretrained(args.base_model)
 model = PeftModel.from_pretrained(base_model, args.checkpoint_dir)
 model = model.merge_and_unload()
 
+tokenizer = AutoTokenizer.from_pretrained(args.checkpoint_dir)
+
 generator = pipeline(
 	"text-generation",
 	model=model,
+	tokenizer=tokenizer,
 	torch_dtype=args.dtype,
 	device_map=args.device
 )
