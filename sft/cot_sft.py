@@ -1,4 +1,8 @@
-# THIS FILE SHOULD BE RAN INSIDE OF sft/
+"""
+
+THIS FILE SHOULD BE RAN IN THE PARENT DIRECTORY, NOT INSIDE OF sft/
+
+"""
 
 import argparse
 import torch
@@ -12,14 +16,14 @@ from peft import LoraConfig, get_peft_model, TaskType
 from trl import SFTConfig, SFTTrainer, DataCollatorForCompletionOnlyLM, apply_chat_template
 
 import sys, os
-sys.path.insert(0, os.path.abspath('..')) # hack for imports
+sys.path.insert(0, os.path.abspath('.')) # hack for imports
 
 from data import dataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--dataset", choices=['gsm8k', '4x4'], type=str, required=True)
 parser.add_argument("-m", "--model", type=str, default="meta-llama/Llama-3.2-1B-Instruct")
-parser.add_argument("--checkpoints_dir", type=str, default="../checkpoints/cot-sft")
+parser.add_argument("--checkpoints_dir", type=str, default="checkpoints/cot-sft")
 parser.add_argument("--epochs", type=int, default=3)
 
 args = parser.parse_args()
