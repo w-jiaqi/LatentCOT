@@ -47,6 +47,6 @@ import tqdm
 
 correct = 0
 
-for idx, example in enumerate(ds['test']):
+for idx, example in enumerate(ds):
 	print(example)
 	print(generator(example["prompt"]))
