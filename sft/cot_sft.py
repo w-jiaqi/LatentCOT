@@ -1,6 +1,6 @@
-import os
+# THIS FILE SHOULD BE RAN INSIDE OF sft/
+
 import argparse
-import sys
 import torch
 from transformers import (
     AutoTokenizer,
@@ -10,12 +10,16 @@ from transformers import (
 )
 from peft import LoraConfig, get_peft_model, TaskType
 from trl import SFTConfig, SFTTrainer, DataCollatorForCompletionOnlyLM, apply_chat_template
-from dataset import get_gsm8k_dataset, get_4x4_multiplication_dataset
+
+import sys, os
+sys.path.insert(0, os.path.abspath('..')) # hack for imports
+
+from data import dataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--dataset", choices=['gsm8k', '4x4'], type=str, required=True)
 parser.add_argument("-m", "--model", type=str, default="meta-llama/Llama-3.2-1B-Instruct")
-parser.add_argument("--checkpoints_dir", type=str, default="checkpoints/cot-sft")
+parser.add_argument("--checkpoints_dir", type=str, default="../checkpoints/cot-sft")
 parser.add_argument("--epochs", type=int, default=3)
 
 args = parser.parse_args()
@@ -30,9 +34,9 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 ds = None
 
 if args.dataset == "gsm8k":
-    ds = get_gsm8k_dataset(tokenizer)
+    ds = dataset.get_gsm8k_dataset(tokenizer)
 elif args.dataset == "4x4":
-    ds = get_4x4_multiplication_dataset(tokenizer)
+    ds = dataset.get_4x4_multiplication_dataset(tokenizer)
 
 print(
     f"Dataset loaded: {len(ds['train'])} training examples, {len(ds['test'])} test examples"
