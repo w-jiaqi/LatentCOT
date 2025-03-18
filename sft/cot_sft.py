@@ -44,7 +44,8 @@ if args.dataset == "gsm8k":
 elif args.dataset == "4x4":
     ds = dataset.get_4x4_multiplication_dataset(tokenizer)
 
-if args.num_train != None:
+if args.num_train != None: 
+    print(f"Num Train {args.num_train}")
     ds['train'] = ds['train'].select(range(args.num_train))
 
 print(
