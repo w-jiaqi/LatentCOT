@@ -15,6 +15,8 @@ from transformers import (
 from peft import LoraConfig, get_peft_model, TaskType
 from trl import SFTConfig, SFTTrainer, DataCollatorForCompletionOnlyLM, apply_chat_template
 
+from datetime import datetime
+
 import sys, os
 sys.path.insert(0, os.path.abspath('.')) # hack for imports
 
@@ -30,7 +32,7 @@ parser.add_argument("--num_train", type=int, default=None, help="Number of train
 
 args = parser.parse_args()
 
-checkpoints_path = os.path.join(args.checkpoints_dir, args.dataset)
+checkpoints_path = os.path.join(args.checkpoints_dir, args.dataset, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 model_name = args.model
 
 model = AutoModelForCausalLM.from_pretrained(model_name)
@@ -58,26 +60,16 @@ peft_config = LoraConfig(
     task_type="CAUSAL_LM",
 )
 
-# training_args = SFTConfig(max_seq_length=2048,
-#     output_dir=checkpoints_path,
-#     report_to="none",
-#     num_train_epochs=args.epochs,
-#     per_device_train_batch_size=8,
-#     optim="adamw_torch",
-#     learning_rate = 1e-4,
-#     logging_steps=10,
-#     weight_decay=0.01,
-#     warmup_steps=100,
-#     save_strategy="epoch"
-# )
-
 training_args = SFTConfig(max_seq_length=2048,
     output_dir=checkpoints_path,
     report_to="none",
     num_train_epochs=args.epochs,
     per_device_train_batch_size=8,
     optim="adamw_torch",
+    learning_rate = 1e-4,
     logging_steps=10,
+    weight_decay=0.01,
+    warmup_steps=100,
     save_strategy="epoch"
 )
 
