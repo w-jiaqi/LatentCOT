@@ -67,7 +67,9 @@ for idx, example in enumerate(ds):
 
 	accuracy = (correct / (idx + 1)) * 100
 
-	pb.set_description(print(f"{accuracy}%"))
+	print(pred_string)
+
+	pb.set_description(f"{accuracy}%")
 	pb.update(1)
 
 
