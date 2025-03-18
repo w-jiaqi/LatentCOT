@@ -44,11 +44,7 @@ print(vars(args))
 if args.dataset == "gsm8k":
     ds = dataset.get_gsm8k_dataset(tokenizer)
 elif args.dataset == "4x4":
-    ds = dataset.get_4x4_multiplication_dataset(tokenizer)
-
-if args.num_train != None: 
-    print(f"Num Train {args.num_train}")
-    ds['train'] = ds['train'].select(range(args.num_train))
+    ds = dataset.get_4x4_multiplication_dataset(tokenizer, num_train=args.num_train)
 
 print(
     f"Dataset loaded: {len(ds['train'])} training examples, {len(ds['test'])} test examples"
