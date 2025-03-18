@@ -62,6 +62,10 @@ def format_multiplication_example_base_model(example):
     return {
         "messages": [
             {
+                "role": "system",
+                "content": f"Only output one number as your final answer"
+            }
+            {
                 "role": "user",
                 "content": f"Question: {question}",
             },
