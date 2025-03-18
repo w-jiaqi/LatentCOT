@@ -37,7 +37,7 @@ args = parser.parse_args()
 
 log_file = os.path.join(
     args.log_dir,
-    f"{args.base_model_args}-_-{utils.get_cur_time_string()}.log",
+    f"{args.base_model}-_-{utils.get_cur_time_string()}.log",
 )
 
 logging.basicConfig(filename=log_file, level=logging.INFO)
