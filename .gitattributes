@@ -1,1 +1,2 @@
-data/** filter=lfs diff=lfs merge=lfs -text
+data/gsm8k/** filter=lfs diff=lfs merge=lfs -text
+data/multiplication/** filter=lfs diff=lfs merge=lfs -text
