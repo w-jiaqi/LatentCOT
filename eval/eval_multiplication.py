@@ -1,15 +1,25 @@
+"""
+
+THIS FILE SHOULD BE RAN IN THE PARENT DIRECTORY, NOT INSIDE OF eval/
+
+"""
+
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from peft import PeftModel
 import argparse
 
 from tqdm.auto import tqdm
+import logging
+
+logger = logging.getLogger(__name__)
 
 import sys, os
 
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
 from data import dataset
+import utils
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -22,9 +32,18 @@ parser.add_argument(
 parser.add_argument("--device", default="cuda")
 parser.add_argument("--dtype", default=torch.bfloat16)
 parser.add_argument("--log_dir", default="eval/logs/multiplication")
-parser.add_argument("--logging_steps", default=50, type=int)
 
 args = parser.parse_args()
+
+log_file = os.path.join(
+    args.log_dir,
+    f"{args.base_model_args}-_-{utils.get_cur_time_string()}.log",
+)
+
+logging.basicConfig(filename=log_file, level=logging.INFO)
+logging.getLogger().addHandler(
+    logging.StreamHandler(sys.stdout)
+)  # also print out logs to stdout
 
 model = None
 tokenizer = None
@@ -89,11 +108,11 @@ for idx, example in enumerate(ds):
 
     accuracy = (correct / (idx + 1)) * 100
 
-    print(f"Prompt: {prompt}")
-    print(f"Predicted String: {pred_string}")
-    print(f"True String: {true_string}")
-    print(f"Predicted Answer: {str(pred_ans)}")
-    print(f"True Answer: {str(true_ans)}")
+    logger.info(f"Prompt: {prompt}\n")
+    logger.info(f"Predicted String: {pred_string}\n")
+    logger.info(f"True String: {true_string}\n")
+    logger.info(f"Predicted Answer: {str(pred_ans)}\n")
+    logger.info(f"True Answer: {str(true_ans)}\n")
 
     pb.set_description(f"{accuracy}%")
     pb.update(1)

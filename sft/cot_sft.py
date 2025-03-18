@@ -15,13 +15,13 @@ from transformers import (
 from peft import LoraConfig, get_peft_model, TaskType
 from trl import SFTConfig, SFTTrainer, DataCollatorForCompletionOnlyLM
 
-from datetime import datetime
 
 import sys, os
 
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
 from data import dataset
+import utils
 
 parser = argparse.ArgumentParser()
 
@@ -40,7 +40,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 checkpoints_path = os.path.join(
-    args.checkpoints_dir, args.dataset, datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    args.checkpoints_dir, args.dataset, utils.get_cur_time_string()
 )
 model_name = args.model
 
