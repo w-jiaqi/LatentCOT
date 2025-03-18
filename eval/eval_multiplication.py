@@ -77,7 +77,7 @@ for idx, example in enumerate(ds):
     ][-1]["content"]
 
     pred_ans = get_ans_from_response(pred_string)
-    true_ans = get_ans_from_response(example["completion"][0]["content"])
+    true_ans = get_ans_from_response(example["messages"][-1]["content"])
 
     if pred_ans == true_ans:
         correct += 1
