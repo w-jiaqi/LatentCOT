@@ -39,7 +39,6 @@ generator = pipeline(
 	device_map=args.device
 )
 
-
 ds = dataset.get_4x4_multiplication_dataset(tokenizer, chat_template=False, eval_only=True)
 
 from tqdm.auto import tqdm
