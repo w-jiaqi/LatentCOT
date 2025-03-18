@@ -59,7 +59,7 @@ def format_multiplication_example_base_model(example):
 
     # reversing the digits so it's more fair for the base model
     num_1 = int(num_1[::-1])
-    num_2 = int(num_1[::-1])
+    num_2 = int(num_2[::-1])
 
     question = str(num_1) + " * " + str(num_2)
 
