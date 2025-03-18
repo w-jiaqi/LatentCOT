@@ -61,7 +61,7 @@ correct = 0
 
 for idx, example in enumerate(ds):
 	def get_ans_from_response(response):
-		answer = response.split("####")[-1].strip().replace(" ", "")
+		answer = response.split("####")[-1].strip().replace(" ", "")[::-1] # reversing string
 
 		try:
 			return int(answer)
