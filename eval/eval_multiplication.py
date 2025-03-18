@@ -28,7 +28,7 @@ generator = pipeline(
 )
 
 messages = [
-	{"role": "user", "content": "5 6 3 2 * 7 4 3 4"},
+	{"role": "user", "content": "Question: 5 6 3 2 * 7 4 3 4"},
 ]
 
 outputs = generator(
