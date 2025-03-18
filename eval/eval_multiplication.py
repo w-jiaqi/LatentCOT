@@ -52,9 +52,9 @@ logging.getLogger().addHandler(
 model = None
 tokenizer = None
 
-finetune_eval = args.finetune_dir != None
+eval_finetune = args.finetune_dir != None
 
-if not finetune_eval:
+if not eval_finetune:
     print("USING BASE MODEL")
     model = AutoModelForCausalLM.from_pretrained(args.base_model)
 
@@ -80,7 +80,9 @@ generator = pipeline(
 ds = None
 
 if args.dataset == "4x4":
-    ds = dataset.get_4x4_multiplication_dataset(eval_only=True)
+    ds = dataset.get_4x4_multiplication_dataset(
+        eval_only=True, base_model=False if eval_finetune else True
+    )
 
 
 pb = tqdm(range(len(ds)))
@@ -98,7 +100,7 @@ for idx, example in enumerate(ds):
 
     pred_ans = (
         m_utils.get_ans_from_response(pred_string)
-        if finetune_eval
+        if eval_finetune
         else m_utils.get_ans_from_response_base_model(pred_string)
     )
 
