@@ -39,7 +39,7 @@ generator = pipeline(
 )
 
 
-ds = dataset.get_4x4_multiplication_dataset(tokenizer, chat_template=False)
+ds = dataset.get_4x4_multiplication_dataset(tokenizer, chat_template=False, eval_only=True)
 
 import tqdm
 
@@ -49,3 +49,4 @@ correct = 0
 
 for idx, example in enumerate(ds['test']):
 	print(example)
+	print(generator(example["prompt"]))
