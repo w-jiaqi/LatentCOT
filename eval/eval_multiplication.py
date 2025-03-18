@@ -37,7 +37,7 @@ args = parser.parse_args()
 
 log_file = os.path.join(
     args.log_dir,
-    f"{args.base_model}_{utils.get_cur_time_string()}.log",
+    f"{utils.string_to_filename(args.base_model)}_{utils.get_cur_time_string()}.log",
 )
 
 utils.create_dir_from_path(log_file)
