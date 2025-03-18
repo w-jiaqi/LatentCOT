@@ -72,9 +72,9 @@ for idx, example in enumerate(ds):
         except ValueError:
             return answer
 
-    pred_string = generator(example[0:2], max_new_tokens=128)[0]["generated_text"][-1][
-        "content"
-    ]
+    pred_string = generator(example["messages"][0:-1], max_new_tokens=128)[0][
+        "generated_text"
+    ][-1]["content"]
 
     pred_ans = get_ans_from_response(pred_string)
     true_ans = get_ans_from_response(example["completion"][0]["content"])
