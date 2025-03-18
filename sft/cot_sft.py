@@ -25,6 +25,8 @@ parser.add_argument("-d", "--dataset", choices=['gsm8k', '4x4'], type=str, requi
 parser.add_argument("-m", "--model", type=str, default="meta-llama/Llama-3.2-1B-Instruct")
 parser.add_argument("--checkpoints_dir", type=str, default="checkpoints/cot-sft")
 parser.add_argument("--epochs", type=int, default=3)
+parser.add_argument("--num_train", type=int, default=None, help="Number of training examples to use")
+
 
 args = parser.parse_args()
 
@@ -41,6 +43,9 @@ if args.dataset == "gsm8k":
     ds = dataset.get_gsm8k_dataset(tokenizer)
 elif args.dataset == "4x4":
     ds = dataset.get_4x4_multiplication_dataset(tokenizer)
+
+if args.num_train != None:
+    ds['train'] = ds['train'].select(range(args.num_train))
 
 print(
     f"Dataset loaded: {len(ds['train'])} training examples, {len(ds['test'])} test examples"
