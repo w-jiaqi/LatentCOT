@@ -39,7 +39,7 @@ args = parser.parse_args()
 
 log_file = os.path.join(
     args.log_dir,
-    f"{utils.string_to_filename(args.base_model)}_{utils.get_cur_time_string()}.log",
+    f"{utils.string_to_filename(args.base_model)}_{args.dataset}_{utils.get_cur_time_string()}.log",
 )
 
 utils.create_dir_from_path(log_file)
@@ -116,10 +116,7 @@ for idx, example in enumerate(ds):
     logger.info(f"True String: {true_string}\n")
     logger.info(f"Predicted Answer: {str(pred_ans)}\n")
     logger.info(f"True Answer: {str(true_ans)}\n")
+    logger.info(f"Accuracy: {accuracy}%")
 
     pb.set_description(f"{accuracy}%")
     pb.update(1)
-
-    # if idx % args.logging_steps == 0:
-    # 	with open(f"{args.log_dir}/{args.base_model}-{args.finetune_dir}-{args.dataset}.log", "a") as f:
-    # 		f.write(f"\nAccuracy: {accuracy}%")
