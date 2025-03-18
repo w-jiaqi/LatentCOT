@@ -83,9 +83,9 @@ for idx, example in enumerate(ds):
 	pb.set_description(f"{accuracy}%")
 	pb.update(1)
 
-	if idx % args.logging_steps == 0:
-		with open(f"{args.log_dir}/{args.base_model}-{args.finetune_dir}-{args.dataset}.log", "a") as f:
-			f.write(f"\nAccuracy: {accuracy}%")
+	# if idx % args.logging_steps == 0:
+	# 	with open(f"{args.log_dir}/{args.base_model}-{args.finetune_dir}-{args.dataset}.log", "a") as f:
+	# 		f.write(f"\nAccuracy: {accuracy}%")
 
 
 
