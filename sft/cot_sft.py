@@ -39,6 +39,8 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 # load the dataset
 ds = None
 
+print(vars(args))
+
 if args.dataset == "gsm8k":
     ds = dataset.get_gsm8k_dataset(tokenizer)
 elif args.dataset == "4x4":
