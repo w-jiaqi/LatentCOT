@@ -44,7 +44,7 @@ print(vars(args))
 if args.dataset == "gsm8k":
     ds = dataset.get_gsm8k_dataset(tokenizer)
 elif args.dataset == "4x4":
-    ds = dataset.get_4x4_multiplication_dataset(tokenizer, num_train=args.num_train)
+    ds = dataset.get_4x4_multiplication_dataset(tokenizer, num_train=args.num_train, chat_template=False)
 
 print(
     f"Dataset loaded: {len(ds['train'])} training examples, {len(ds['test'])} test examples"
@@ -58,16 +58,26 @@ peft_config = LoraConfig(
     task_type="CAUSAL_LM",
 )
 
+# training_args = SFTConfig(max_seq_length=2048,
+#     output_dir=checkpoints_path,
+#     report_to="none",
+#     num_train_epochs=args.epochs,
+#     per_device_train_batch_size=8,
+#     optim="adamw_torch",
+#     learning_rate = 1e-4,
+#     logging_steps=10,
+#     weight_decay=0.01,
+#     warmup_steps=100,
+#     save_strategy="epoch"
+# )
+
 training_args = SFTConfig(max_seq_length=2048,
     output_dir=checkpoints_path,
     report_to="none",
     num_train_epochs=args.epochs,
     per_device_train_batch_size=8,
     optim="adamw_torch",
-    learning_rate = 1e-4,
     logging_steps=10,
-    weight_decay=0.01,
-    warmup_steps=100,
     save_strategy="epoch"
 )
 
