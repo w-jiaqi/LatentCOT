@@ -54,16 +54,22 @@ def format_multiplication_example_base_model(example):
     text = example["text"]
 
     question = text.split("||")[0].strip()
-    full_answer = text.split("||")[1].strip()
+    num_1 = question.split("*")[0]
+    num_2 = question.split("*")[1]
 
-    reasoning = full_answer.split("####")[0].strip()
-    answer = full_answer.split("####")[1].strip()
+    # reversing the digits so it's more fair for the base model
+    num_1 = int(num_1[::-1])
+    num_2 = int(num_1[::-1])
+
+    question = str(num_1) + " * " + str(num_2)
+
+    full_answer = text.split("||")[1].strip()
 
     return {
         "messages": [
             {
                 "role": "system",
-                "content": f"Only output one number as your final answer with your digits in reverse order. You MUST not write anything else. Your final answer MUST be in reverse order.",
+                "content": f"Only output one number as your final answer. You MUST not write anything else.",
             },
             {
                 "role": "user",
