@@ -22,7 +22,7 @@ model = model.merge_and_unload()
 
 generator = pipeline(
 	"text-generation",
-	model=args.model,
+	model=model,
 	torch_dtype=args.dtype,
 	device_map=args.device
 )
