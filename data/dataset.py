@@ -63,7 +63,7 @@ def format_multiplication_example_base_model(example):
         "messages": [
             {
                 "role": "system",
-                "content": f"Only output one number as your final answer. You MUST not write anything else",
+                "content": f"Only output one number as your final answer with your digits in reverse order. You MUST not write anything else",
             },
             {
                 "role": "user",
