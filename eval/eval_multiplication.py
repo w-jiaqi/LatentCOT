@@ -57,7 +57,7 @@ pb = tqdm(range(len(ds)))
 correct = 0
 
 for idx, example in enumerate(ds):
-	pred_string = generator(example["prompt"], max_new_tokens=512)[0]['generated_text'][-1]['content']
+	pred_string = generator(example["prompt"], max_new_tokens=128)[0]['generated_text'][-1]['content']
 
 	pred_ans = get_ans_from_response(pred_string)
 	true_ans = get_ans_from_response(example['completion'][0]['content'])
