@@ -43,7 +43,7 @@ ds = dataset.get_4x4_multiplication_dataset(tokenizer, chat_template=False, eval
 
 import tqdm
 
-pb = tqdm()
+# pb = tqdm()
 
 correct = 0
 
