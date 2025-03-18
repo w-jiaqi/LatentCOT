@@ -45,7 +45,28 @@ def format_multiplication_example(example):
     }
 
 
-def get_4x4_multiplication_dataset(eval_only=False, num_train=None):
+# dont have the base model follow the reverse digit instructions
+def format_multiplication_example_base_model(example):
+    text = example["text"]
+
+    question = text.split("||")[0].strip()
+    full_answer = text.split("||")[1].strip()
+
+    reasoning = full_answer.split("####")[0].strip()
+    answer = full_answer.split("####")[1].strip()
+
+    return {
+        "messages": [
+            {
+                "role": "user",
+                "content": f"Question: {question}",
+            },
+            {"role": "assistant", "content": full_answer},
+        ]
+    }
+
+
+def get_4x4_multiplication_dataset(eval_only=False, num_train=None, base_model=False):
     ds = load_dataset(
         "text",
         data_files={
@@ -54,13 +75,19 @@ def get_4x4_multiplication_dataset(eval_only=False, num_train=None):
         },
     )
 
+    format_func = (
+        format_multiplication_example
+        if not base_model
+        else format_multiplication_example_base_model
+    )
+
     fn_kwargs = {}
 
     if num_train != None:
         ds["train"] = ds["train"].select(range(num_train))
 
     ds["test"] = ds["test"].map(
-        format_multiplication_example,
+        format_func,
         fn_kwargs=fn_kwargs,
         remove_columns=ds["test"].features,
     )
@@ -69,7 +96,7 @@ def get_4x4_multiplication_dataset(eval_only=False, num_train=None):
         return ds["test"]
 
     ds["train"] = ds["train"].map(
-        format_multiplication_example,
+        format_func,
         fn_kwargs=fn_kwargs,
         remove_columns=ds["train"].features,
     )
