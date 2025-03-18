@@ -18,21 +18,30 @@ from trl import SFTConfig, SFTTrainer, DataCollatorForCompletionOnlyLM
 from datetime import datetime
 
 import sys, os
-sys.path.insert(0, os.path.abspath('.')) # hack for imports
+
+sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
 from data import dataset
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-d", "--dataset", choices=['gsm8k', '4x4'], type=str, required=True)
-parser.add_argument("-m", "--model", type=str, default="meta-llama/Llama-3.2-1B-Instruct")
+
+parser.add_argument(
+    "-d", "--dataset", choices=["gsm8k", "4x4"], type=str, required=True
+)
+parser.add_argument(
+    "-m", "--model", type=str, default="meta-llama/Llama-3.2-1B-Instruct"
+)
 parser.add_argument("--checkpoints_dir", type=str, default="checkpoints/cot-sft")
 parser.add_argument("--epochs", type=int, default=3)
-parser.add_argument("--num_train", type=int, default=None, help="Number of training examples to use")
-
+parser.add_argument(
+    "--num_train", type=int, default=None, help="Number of training examples to use"
+)
 
 args = parser.parse_args()
 
-checkpoints_path = os.path.join(args.checkpoints_dir, args.dataset, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+checkpoints_path = os.path.join(
+    args.checkpoints_dir, args.dataset, datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+)
 model_name = args.model
 
 model = AutoModelForCausalLM.from_pretrained(model_name)
@@ -52,6 +61,10 @@ print(
     f"Dataset loaded: {len(ds['train'])} training examples, {len(ds['test'])} test examples"
 )
 
+example_train = ds["train"][0]
+
+print(example_train)
+
 peft_config = LoraConfig(
     r=16,
     lora_alpha=32,
@@ -60,22 +73,23 @@ peft_config = LoraConfig(
     task_type="CAUSAL_LM",
 )
 
-training_args = SFTConfig(max_seq_length=2048,
+training_args = SFTConfig(
+    max_seq_length=2048,
     output_dir=checkpoints_path,
     report_to="none",
     num_train_epochs=args.epochs,
     per_device_train_batch_size=8,
     optim="adamw_torch",
-    learning_rate = 1e-4,
+    learning_rate=1e-4,
     logging_steps=10,
     weight_decay=0.01,
     warmup_steps=100,
-    save_strategy="epoch"
+    save_strategy="epoch",
 )
 
 trainer = SFTTrainer(
     model_name,
-    train_dataset=ds['train'],
+    train_dataset=ds["train"],
     args=training_args,
     peft_config=peft_config,
 )
