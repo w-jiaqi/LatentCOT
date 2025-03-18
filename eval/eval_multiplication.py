@@ -7,13 +7,21 @@ from transformers import (
 from peft import PeftModel
 import argparse
 
+import sys, os
+sys.path.insert(0, os.path.abspath('.')) # hack for imports
+
+from data import dataset
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-m", "--base_model", type=str, default="meta-llama/Llama-3.2-1B-Instruct")
-parser.add_argument("-c", "--checkpoint_dir", type=str, required=True)
+parser.add_argument("-c", "--checkpoint_dir", type=str, default=None)
 parser.add_argument("-d", "--device", default="cuda")
 parser.add_argument("--dtype", default=torch.bfloat16)
 
 args = parser.parse_args()
+
+if args.checkpoint_dir == None:
+	print("USING BASE MODEL")
 
 base_model = AutoModelForCausalLM.from_pretrained(args.base_model)
 
@@ -30,13 +38,14 @@ generator = pipeline(
 	device_map=args.device
 )
 
-messages = [
-	{"role": "user", "content": "Question: 5 6 3 2 * 7 4 3 4"},
-]
 
-outputs = generator(
-	messages,
-	max_new_tokens=256
-)
+ds = dataset.get_4x4_multiplication_dataset(tokenizer, chat_template=False)
 
-print(outputs[0]["generated_text"][-1])
+import tqdm
+
+pb = tqdm()
+
+correct = 0
+
+for idx, example in enumerate(ds['test']):
+	print(example)
