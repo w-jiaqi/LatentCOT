@@ -8,6 +8,7 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from peft import PeftModel
 import argparse
+import re
 
 from tqdm.auto import tqdm
 import logging
@@ -19,7 +20,8 @@ import sys, os
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
 from data import dataset
-import utils
+import utils.utils as utils
+import utils.multiplication_utils as m_utils
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -50,7 +52,9 @@ logging.getLogger().addHandler(
 model = None
 tokenizer = None
 
-if args.finetune_dir == None:
+finetune_eval = args.finetune_dir != None
+
+if not finetune_eval:
     print("USING BASE MODEL")
     model = AutoModelForCausalLM.from_pretrained(args.base_model)
 
@@ -70,23 +74,13 @@ generator = pipeline(
     tokenizer=tokenizer,
     torch_dtype=args.dtype,
     device_map=args.device,
+    pad_token_id=tokenizer.eos_token_id,
 )
 
 ds = None
 
 if args.dataset == "4x4":
     ds = dataset.get_4x4_multiplication_dataset(eval_only=True)
-
-
-def get_ans_from_response(response):
-    answer = (
-        response.split("####")[-1].strip().replace(" ", "")[::-1]
-    )  # reversing string
-
-    try:
-        return int(answer)
-    except ValueError:
-        return answer
 
 
 pb = tqdm(range(len(ds)))
@@ -102,8 +96,13 @@ for idx, example in enumerate(ds):
 
     true_string = example["messages"][-1]["content"]
 
-    pred_ans = get_ans_from_response(pred_string)
-    true_ans = get_ans_from_response(true_string)
+    pred_ans = (
+        m_utils.get_ans_from_response(pred_string)
+        if finetune_eval
+        else m_utils.get_ans_from_response_base_model(pred_string)
+    )
+
+    true_ans = m_utils.get_ans_from_response(true_string)
 
     if pred_ans == true_ans:
         correct += 1

@@ -21,7 +21,7 @@ import sys, os
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
 from data import dataset
-import utils
+import utils.utils as utils
 
 parser = argparse.ArgumentParser()
 
