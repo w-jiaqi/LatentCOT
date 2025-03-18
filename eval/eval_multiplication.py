@@ -56,35 +56,44 @@ ds = None
 if args.dataset == "4x4":
     ds = dataset.get_4x4_multiplication_dataset(eval_only=True)
 
+
+def get_ans_from_response(response):
+    answer = (
+        response.split("####")[-1].strip().replace(" ", "")[::-1]
+    )  # reversing string
+
+    try:
+        return int(answer)
+    except ValueError:
+        return answer
+
+
 pb = tqdm(range(len(ds)))
 
 correct = 0
 
 for idx, example in enumerate(ds):
+    prompt = example["messages"][:-1]
 
-    def get_ans_from_response(response):
-        answer = (
-            response.split("####")[-1].strip().replace(" ", "")[::-1]
-        )  # reversing string
+    pred_string = generator(prompt, max_new_tokens=128)[0]["generated_text"][-1][
+        "content"
+    ]
 
-        try:
-            return int(answer)
-        except ValueError:
-            return answer
-
-    pred_string = generator(example["messages"][:-1], max_new_tokens=128)[0][
-        "generated_text"
-    ][-1]["content"]
+    true_string = example["messages"][-1]["content"]
 
     pred_ans = get_ans_from_response(pred_string)
-    true_ans = get_ans_from_response(example["messages"][-1]["content"])
+    true_ans = get_ans_from_response(true_string)
 
     if pred_ans == true_ans:
         correct += 1
 
     accuracy = (correct / (idx + 1)) * 100
 
-    print(pred_string)
+    print(f"Prompt: {prompt}")
+    print(f"Predicted String: {pred_string}")
+    print(f"True String: {true_string}")
+    print(f"Predicted Answer: {str(pred_ans)}")
+    print(f"True Answer: {str(true_ans)}")
 
     pb.set_description(f"{accuracy}%")
     pb.update(1)
