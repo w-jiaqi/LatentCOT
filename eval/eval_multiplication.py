@@ -52,9 +52,7 @@ logging.getLogger().addHandler(
 model = None
 tokenizer = None
 
-print("SETTING EVAL FINETUNE TO TRUE")
-# eval_finetune = args.finetune_dir != None
-eval_finetune = True
+eval_finetune = args.finetune_dir != None
 
 if not eval_finetune:
     print("USING BASE MODEL")
@@ -69,6 +67,9 @@ else:
     model = model.merge_and_unload()
 
     tokenizer = AutoTokenizer.from_pretrained(args.finetune_dir)
+
+print("SETTING EVAL FINETUNE TO TRUE FOR EVAL PURPOSES")
+eval_finetune = True
 
 generator = pipeline(
     "text-generation",
