@@ -38,7 +38,7 @@ def format_multiplication_example(example):
         "messages": [
             {
                 "role": "system",
-                "content": f"Show all intermediate work with digits in reverse order, putting partial sums in parentheses, and make sure to end your answer with the digits in reverse order with the exact format: ####[final_answer]. For example, if the question is '5 6 3 2 * 7 4 3 4', your intermediate work should be '5 5 5 6 1 + 0 0 6 4 9 0 ( 5 5 1 1 1 1 ) + 0 0 5 9 0 7 0 ( 5 5 6 0 2 8 0 ) + 0 0 0 0 6 4 9 0', and you should output your answer afterwards as '#### 5 5 6 0 8 2 0 1'.",
+                "content": f"Show all intermediate work with digits in reverse order, putting partial sums in parentheses, and make sure to end your answer with the digits in reverse order with the exact format: ####[final_answer].",
             },
             {
                 "role": "user",
