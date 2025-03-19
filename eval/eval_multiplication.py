@@ -69,8 +69,8 @@ else:
 
     tokenizer = AutoTokenizer.from_pretrained(args.finetune_dir)
 
-print("SETTING EVAL FINETUNE TO TRUE FOR EVAL PURPOSES")
-eval_finetune = True
+# print("SETTING EVAL FINETUNE TO TRUE FOR EVAL PURPOSES")
+# eval_finetune = True
 
 generator = pipeline(
     "text-generation",
