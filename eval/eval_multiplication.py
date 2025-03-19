@@ -34,6 +34,7 @@ parser.add_argument(
 parser.add_argument("--device", default="cuda")
 parser.add_argument("--dtype", default=torch.bfloat16)
 parser.add_argument("--log_dir", default="eval/logs/multiplication")
+parser.add_argument("--max_new_tokens", type=int, default=128)
 
 args = parser.parse_args()
 
@@ -95,9 +96,9 @@ correct = 0
 for idx, example in enumerate(ds):
     prompt = example["messages"][:-1]
 
-    pred_string = generator(prompt, max_new_tokens=128)[0]["generated_text"][-1][
-        "content"
-    ]
+    pred_string = generator(prompt, max_new_tokens=args.max_new_tokens)[0][
+        "generated_text"
+    ][-1]["content"]
 
     true_string = example["messages"][-1]["content"]
 
