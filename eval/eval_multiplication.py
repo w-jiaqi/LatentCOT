@@ -52,7 +52,9 @@ logging.getLogger().addHandler(
 model = None
 tokenizer = None
 
-eval_finetune = args.finetune_dir != None
+print("SETTING EVAL FINETUNE TO TRUE")
+# eval_finetune = args.finetune_dir != None
+eval_finetune = True
 
 if not eval_finetune:
     print("USING BASE MODEL")
