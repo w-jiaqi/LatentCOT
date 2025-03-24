@@ -5,22 +5,19 @@ THIS FILE SHOULD BE RAN IN THE PARENT DIRECTORY, NOT INSIDE OF sft/
 """
 
 import argparse
-import torch
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
-    BitsAndBytesConfig,
+    TrainingArguments,
+    Trainer,
     TrainingArguments,
 )
-from peft import LoraConfig, get_peft_model, TaskType
-from trl import SFTConfig, SFTTrainer, DataCollatorForCompletionOnlyLM
-
 
 import sys, os
 
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
-from data import dataset
+from data import dataset, multiplication_dataset
 import utils.utils as utils
 
 parser = argparse.ArgumentParser()
@@ -40,11 +37,14 @@ parser.add_argument(
 args = parser.parse_args()
 
 checkpoints_path = os.path.join(
-    args.checkpoints_dir, args.dataset, utils.get_cur_time_string()
+    args.checkpoints_dir, 
+    args.dataset, 
+    utils.get_cur_time_string()
 )
+
 model_name = args.model
 
-model = AutoModelForCausalLM.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype="auto")
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 # load the dataset
@@ -55,7 +55,7 @@ print(vars(args))
 if args.dataset == "gsm8k":
     ds = dataset.get_gsm8k_dataset(tokenizer)
 elif args.dataset == "4x4":
-    ds = dataset.get_4x4_multiplication_dataset(num_train=args.num_train)
+    ds = multiplication_dataset.get_4x4_multiplication_dataset(tokenizer, num_train=args.num_train)
 
 print(
     f"Dataset loaded: {len(ds['train'])} training examples, {len(ds['test'])} test examples"
@@ -65,16 +65,7 @@ example_train = ds["train"][0]
 
 print(example_train)
 
-peft_config = LoraConfig(
-    r=16,
-    lora_alpha=32,
-    lora_dropout=0.05,
-    target_modules="all-linear",
-    task_type="CAUSAL_LM",
-)
-
-training_args = SFTConfig(
-    max_seq_length=2048,
+training_args = TrainingArguments(
     output_dir=checkpoints_path,
     report_to="none",
     num_train_epochs=args.epochs,
@@ -84,14 +75,13 @@ training_args = SFTConfig(
     logging_steps=10,
     weight_decay=0.01,
     warmup_steps=100,
-    save_strategy="epoch",
+    save_strategy="steps",
 )
 
-trainer = SFTTrainer(
-    model_name,
+trainer = Trainer(
+    model,
     train_dataset=ds["train"],
     args=training_args,
-    peft_config=peft_config,
 )
 
 trainer.train()
