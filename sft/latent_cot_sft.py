@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 import argparse
 from utils import utils
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from data.multiplication_dataset import get_text_to_latent_dataset
+# from data.multiplication_dataset import get_text_to_latent_dataset
 from sft.models.text_2_latent import Text2Latent
 from tqdm.auto import tqdm
 
@@ -50,12 +50,32 @@ base_model.resize_token_embeddings(len(tokenizer))
 
 model = Text2Latent(base_model, tokenizer)
 
+if args.dataset == "4x4":
+    from data.multiplication_dataset import get_text_to_latent_dataset
+    text_to_latent_ds = get_text_to_latent_dataset(
+        tokenizer,
+        base_model.get_input_embeddings(),
+        start_latent_id,
+        end_latent_id,
+        num_train=args.num_train
+    )
+elif args.dataset == "gsm8k":
+    from data.gsm8k_dataset import get_text_to_latent_dataset
+    text_to_latent_ds = get_text_to_latent_dataset(
+        tokenizer,
+        base_model.get_input_embeddings(),
+        start_latent_id,
+        end_latent_id,
+        num_train=args.num_train
+    )
+"""
 text_to_latent_ds = get_text_to_latent_dataset(
 	tokenizer, 
 	base_model.get_input_embeddings(), 
 	start_latent_id, end_latent_id, 
 	num_train=args.num_train
 )
+"""
 
 optim = torch.optim.Adam(base_model.parameters(), lr=1e-5)
 
