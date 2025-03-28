@@ -13,13 +13,6 @@ class Latent2Text(nn.Module):
 		return self.model.parameters
 
 	def forward(self, input_embeds, attention_mask, labels):
-		# print(input_embeds)
-		# print(input_embeds.shape)
-		# print(attention_mask)
-		# print(attention_mask.shape)
-		# print(labels)
-		# print(labels.shape)
-
 		src_input_embeds = input_embeds[:, :-1, :]
 
 		outputs = self.model(
@@ -31,12 +24,8 @@ class Latent2Text(nn.Module):
 		pred_logits = logits.view(-1, logits.shape[-1])
 		tgt_labels = labels[:, 1:].contiguous().view(-1)
 
-		# print(pred_logits)
-		# print(tgt_labels)
-
 		loss_fn = nn.CrossEntropyLoss()
 		loss = loss_fn(pred_logits, tgt_labels)
 
 		return loss
-
 

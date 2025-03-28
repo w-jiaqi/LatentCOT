@@ -1,3 +1,7 @@
+import sys, os
+sys.path.insert(0, os.path.abspath("."))  # hack for imports
+
+from data.dataset import compress_embeddings
 from datasets import load_dataset
 import torch
 
@@ -19,7 +23,8 @@ def get_base_dataset(num_train=None, num_proc=None):
         return {
             "question": question,
             "reasoning": reasoning,
-            "answer": answer
+            "answer": answer,
+            "full_answer": full_answer
         }
     
 
@@ -166,13 +171,7 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
         reasoning_ids = tokenizer.encode(reasoning, return_tensors="pt", add_special_tokens=False)[0] # remove batch dimension
         reasoning_embeddings = embedding(reasoning_ids) 
 
-        reasoning_length, latent_dim = reasoning_embeddings.shape
-        latent_reasoning_length = (reasoning_length // latent_pool) + 1
-
-        latent_reasoning_embeddings = torch.zeros(latent_reasoning_length, latent_dim)
-        
-        for i in range(0, reasoning_length, latent_pool):
-            latent_reasoning_embeddings[i // latent_pool, :] = reasoning_embeddings[i:i+latent_pool, :].mean(dim=0)
+        latent_reasoning_length, latent_reasoning_embeddings = compress_embeddings(reasoning_embeddings, latent_pool)
         
         input_embeds = torch.cat((
             start_latent_embedding.unsqueeze(0), # turning it into 1 x latent_dim
@@ -183,10 +182,10 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
             end_cot_embedding.unsqueeze(0)
         ), dim=0)
 
-        attention_mask = torch.ones(input_embeds.shape[:-1])
+        attention_mask = torch.ones(input_embeds.shape[:-1]) # ignore latent_dim
         labels = torch.cat((
             torch.full(((3+latent_reasoning_length,)), IGNORE_ID),  # ignore start_latent, end_latent, and start_cot
-            reasoning_ids, 
+            reasoning_ids,
             torch.tensor(end_cot_id).reshape(1)))
 
         assert labels.shape[0] == input_embeds.shape[0]

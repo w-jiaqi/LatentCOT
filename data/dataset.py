@@ -1,5 +1,18 @@
+import torch
 from datasets import load_dataset
 from trl import apply_chat_template
+
+def compress_embeddings(embeddings, latent_pool):
+    seq_length, latent_dim = embeddings.shape
+    latent_seq_length = (seq_length // latent_pool) + 1
+
+    latent_embeddings = torch.zeros(latent_seq_length, latent_dim)
+    
+    for i in range(0, seq_length, latent_pool):
+        latent_embeddings[i // latent_pool, :] = embeddings[i:i+latent_pool, :].mean(dim=0)
+
+
+    return latent_seq_length, latent_embeddings
 
 
 def get_gsm8k_dataset(tokenizer):
