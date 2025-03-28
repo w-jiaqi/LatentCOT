@@ -18,6 +18,10 @@ parser.add_argument(
     "-m", "--model_path", type=str, required=True,
 )
 
+parser.add_argument(
+    "-l", "--latent_pool", type=int, required=True,
+)
+
 args = parser.parse_args()
 
 model = AutoModelForCausalLM.from_pretrained(args.model_path)
@@ -35,7 +39,7 @@ while True:
 	embedding = model.get_input_embeddings()
 	inputs_embeds = (torch.cat((
 		embedding(torch.tensor(start_latent_id)).unsqueeze(0), 
-		compress_embeddings(embedding(input_ids)[0], 10)[1],
+		compress_embeddings(embedding(input_ids)[0], args.latent_pool)[1],
 		embedding(torch.tensor(end_latent_id)).unsqueeze(0),
 		embedding(torch.tensor(start_cot_id)).unsqueeze(0)
 	))).unsqueeze(0)

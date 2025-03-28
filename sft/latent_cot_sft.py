@@ -27,6 +27,9 @@ parser.add_argument("--checkpoints_dir", type=str, default="checkpoints/latent-c
 parser.add_argument(
     "--num_train", type=int, default=None, help="Number of training examples to use"
 )
+parser.add_argument(
+	"-l", "--latent_pool", type=int, required=True
+)
 
 args = parser.parse_args()
 
@@ -38,43 +41,45 @@ checkpoints_path = os.path.join(
 
 model_id = args.model
 
-base_model = AutoModelForCausalLM.from_pretrained(model_id) # TODO: figure out how to set torch_dtype="auto"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 
-tokenizer.add_tokens("<|start-latent|>")
-tokenizer.add_tokens("<|end-latent|>")
-tokenizer.add_tokens("<|start-cot|>")
-tokenizer.add_tokens("<|end-cot|>")
+start_latent_string = "<|start-latent|>"
+end_latent_string = "<|end-latent|>"
+start_cot_string = "<|start-cot|>"
+end_cot_string = "<|end-cot|>"
 
-start_latent_id = tokenizer.convert_tokens_to_ids("<|start-latent|>")
-end_latent_id = tokenizer.convert_tokens_to_ids("<|end-latent|>")
-start_cot_id = tokenizer.convert_tokens_to_ids("<|start-cot|>")
-end_cot_id = tokenizer.convert_tokens_to_ids("<|end-cot|>")
+tokenizer.add_tokens(start_latent_string)
+tokenizer.add_tokens(end_latent_string)
+tokenizer.add_tokens(start_cot_string)
+tokenizer.add_tokens(end_cot_string)
 
-base_model.resize_token_embeddings(len(tokenizer))
+start_latent_id = tokenizer.convert_tokens_to_ids(start_latent_string)
+end_latent_id = tokenizer.convert_tokens_to_ids(end_latent_string)
+start_cot_id = tokenizer.convert_tokens_to_ids(start_cot_string)
+end_cot_id = tokenizer.convert_tokens_to_ids(end_cot_string)
 
-# model = Text2Latent(base_model, tokenizer)
-model = Latent2Text(base_model, tokenizer)
+# model = Text2Latent(model_id, tokenizer)
+model = Latent2Text(model_id, tokenizer)
 
 # text_to_latent_ds = get_text_to_latent_dataset(
 # 	tokenizer, 
 # 	base_model.get_input_embeddings(), 
 # 	start_latent_id, end_latent_id, 
-# 	num_train=args.num_train
+# 	latent_pool=args.latent_pool, num_train=args.num_train
 # )
 
 latent_to_text_ds = get_latent_to_text_dataset(
 	tokenizer,
-	base_model.get_input_embeddings(),
+	model.embedding(),
 	start_latent_id, end_latent_id,
 	start_cot_id, end_cot_id,
-	num_train=args.num_train
+	latent_pool=args.latent_pool, num_train=args.num_train
 )
 
-optim = torch.optim.Adam(base_model.parameters(), lr=1e-5)
+optim = torch.optim.Adam(model.parameters(), lr=1e-5)
 
 # text_to_latent_dataloader = DataLoader(text_to_latent_ds['train'], batch_size=32)
-latent_to_text_dataloader = DataLoader(latent_to_text_ds['train'], collate_fn=collate_fn, batch_size=2)
+latent_to_text_dataloader = DataLoader(latent_to_text_ds['train'], collate_fn=collate_fn, batch_size=32)
 
 # progress_bar = tqdm(range(len(text_to_latent_dataloader)))
 progress_bar = tqdm(range(len(latent_to_text_dataloader)))
@@ -95,5 +100,5 @@ for batch_idx, batch in enumerate(latent_to_text_dataloader):
 
 	progress_bar.update(1)
 
-base_model.save_pretrained(checkpoints_path)
+model.save_pretrained(checkpoints_path)
 tokenizer.save_pretrained(checkpoints_path)

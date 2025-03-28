@@ -1,16 +1,21 @@
-import torch
+from transformers import AutoModelForCausalLM
 from torch import nn
 import torch.nn.functional as F
 
 class Text2Latent(nn.Module):
-	def __init__(self, model, tokenizer):
+	def __init__(self, model_id, tokenizer):
 		super(Text2Latent, self).__init__()
 
-		self.model = model
+		self.model = AutoModelForCausalLM.from_pretrained(model_id)
 		self.tokenizer = tokenizer
+
+		self.model.resize_token_embeddings(len(tokenizer))
 
 	def parameters(self):
 		return self.model.parameters()
+
+	def embedding(self):
+		return self.model.get_input_embeddings()
 
 	def forward(self, input_embeds, attention_mask, label_mask):
 		src_embeds = input_embeds[:, :-1, :]
@@ -32,7 +37,6 @@ class Text2Latent(nn.Module):
 		pred_embeds = pred_embeds.view(-1, latent_dim)
 		tgt_embeds = tgt_embeds.contiguous().view(-1, latent_dim)
 
-
 		masked_preds = pred_embeds[loss_mask.bool()]
 		masked_targets = tgt_embeds[loss_mask.bool()]
 
@@ -40,3 +44,5 @@ class Text2Latent(nn.Module):
 
 		return loss
 
+	def save_pretrained(self, path):
+		self.model.save_pretrained(path)

@@ -26,7 +26,6 @@ def get_base_dataset(num_train=None, num_proc=None):
             "answer": answer,
             "full_answer": full_answer
         }
-    
 
     ds = load_dataset(
         "text",
@@ -43,7 +42,8 @@ def get_base_dataset(num_train=None, num_proc=None):
     
     return ds
 
-def get_4x4_multiplication_dataset(tokenizer, num_train=None, num_proc=None):
+# labels, input_ids, attention_mask
+def get_cot_sft_dataset(tokenizer, num_train=None, num_proc=None):
     def preprocess_fn(examples):
         questions = [example.split("||")[0] + '||' for example in examples['text']] # TODO change to \n and then use same base dataset of QRA
         answers = [example.split("||")[1] for example in examples['text']]
@@ -165,15 +165,20 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
     start_cot_embedding = embedding(torch.tensor(start_cot_id))
     end_cot_embedding = embedding(torch.tensor(end_cot_id))
 
-    def preprocess_fn(example):
+    def preprocess_fn(batch):
+        example = batch[0] # batch size of 1
         reasoning = example['reasoning']
+        answer = example['answer']
         
         reasoning_ids = tokenizer.encode(reasoning, return_tensors="pt", add_special_tokens=False)[0] # remove batch dimension
         reasoning_embeddings = embedding(reasoning_ids) 
 
+        answer_ids = tokenizer.encode(answer, return_tensors="pt", add_special_tokens=False)[0]
+        answer_embeddings = embedding(answer_ids)
+
         latent_reasoning_length, latent_reasoning_embeddings = compress_embeddings(reasoning_embeddings, latent_pool)
         
-        input_embeds = torch.cat((
+        cot_input_embeds = torch.cat((
             start_latent_embedding.unsqueeze(0), # turning it into 1 x latent_dim
             latent_reasoning_embeddings,
             end_latent_embedding.unsqueeze(0),
@@ -182,13 +187,33 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
             end_cot_embedding.unsqueeze(0)
         ), dim=0)
 
-        attention_mask = torch.ones(input_embeds.shape[:-1]) # ignore latent_dim
-        labels = torch.cat((
+        ans_input_embeds = torch.cat((
+            start_latent_embedding.unsqueeze(0),
+            latent_reasoning_embeddings,
+            end_latent_embedding.unsqueeze(0),
+            answer_embeddings,
+        ), dim=0)
+
+        cot_attention_mask = torch.ones(cot_input_embeds.shape[:-1]) # ignore latent_dim
+        ans_attention_mask = torch.ones(ans_input_embeds.shape[:-1])
+
+        cot_labels = torch.cat((
             torch.full(((3+latent_reasoning_length,)), IGNORE_ID),  # ignore start_latent, end_latent, and start_cot
             reasoning_ids,
-            torch.tensor(end_cot_id).reshape(1)))
+            torch.tensor(end_cot_id).unsqueeze(0)
+        ))
 
-        assert labels.shape[0] == input_embeds.shape[0]
+        ans_labels = torch.cat((
+            torch.full(((2+latent_reasoning_length,)), IGNORE_ID), # ignore start_latent, end_latent
+            answer_ids,
+        ))
+
+        assert cot_labels.shape[0] == ans_input_embeds.shape[0]
+        assert ans_labels.shape[0] == ans_input_embeds.shape[0]
+
+        input_embeds = [cot_input_embeds, ans_input_embeds]
+        attention_mask = [cot_attention_mask, ans_attention_mask]
+        labels = [cot_labels, ans_labels]
 
         return {
             'input_embeds': input_embeds,
@@ -198,7 +223,7 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
 
     ds = get_base_dataset(num_train, num_proc)
 
-    ds = ds.map(preprocess_fn, batched=False, num_proc=num_proc)
+    ds = ds.map(preprocess_fn, batched=True, batch_size=1, num_proc=num_proc, remove_columns=ds['train'].column_names)
     ds.set_format('pt')
 
     return ds
