@@ -6,8 +6,9 @@ from torch.utils.data import DataLoader
 import argparse
 from utils import utils
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from data.multiplication_dataset import get_text_to_latent_dataset
+from data.multiplication_dataset import get_text_to_latent_dataset, get_latent_to_text_dataset, collate_fn
 from sft.models.text_2_latent import Text2Latent
+from sft.models.latent_2_text import Latent2Text
 from tqdm.auto import tqdm
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -37,37 +38,54 @@ checkpoints_path = os.path.join(
 
 model_id = args.model
 
-base_model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype="auto")
+base_model = AutoModelForCausalLM.from_pretrained(model_id) # TODO: figure out how to set torch_dtype="auto"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 
 tokenizer.add_tokens("<|start-latent|>")
 tokenizer.add_tokens("<|end-latent|>")
+tokenizer.add_tokens("<|start-cot|>")
+tokenizer.add_tokens("<|end-cot|>")
 
 start_latent_id = tokenizer.convert_tokens_to_ids("<|start-latent|>")
 end_latent_id = tokenizer.convert_tokens_to_ids("<|end-latent|>")
+start_cot_id = tokenizer.convert_tokens_to_ids("<|start-cot|>")
+end_cot_id = tokenizer.convert_tokens_to_ids("<|end-cot|>")
 
 base_model.resize_token_embeddings(len(tokenizer))
 
-model = Text2Latent(base_model, tokenizer)
+# model = Text2Latent(base_model, tokenizer)
+model = Latent2Text(base_model, tokenizer)
 
-text_to_latent_ds = get_text_to_latent_dataset(
-	tokenizer, 
-	base_model.get_input_embeddings(), 
-	start_latent_id, end_latent_id, 
+# text_to_latent_ds = get_text_to_latent_dataset(
+# 	tokenizer, 
+# 	base_model.get_input_embeddings(), 
+# 	start_latent_id, end_latent_id, 
+# 	num_train=args.num_train
+# )
+
+latent_to_text_ds = get_latent_to_text_dataset(
+	tokenizer,
+	base_model.get_input_embeddings(),
+	start_latent_id, end_latent_id,
+	start_cot_id, end_cot_id,
 	num_train=args.num_train
 )
 
 optim = torch.optim.Adam(base_model.parameters(), lr=1e-5)
 
-text_to_latent_dataloader = DataLoader(text_to_latent_ds['train'], batch_size=32)
+# text_to_latent_dataloader = DataLoader(text_to_latent_ds['train'], batch_size=32)
+latent_to_text_dataloader = DataLoader(latent_to_text_ds['train'], collate_fn=collate_fn, batch_size=2)
 
-progress_bar = tqdm(range(len(text_to_latent_dataloader)))
+# progress_bar = tqdm(range(len(text_to_latent_dataloader)))
+progress_bar = tqdm(range(len(latent_to_text_dataloader)))
 
 model = model.to(device)
-for batch_idx, batch in enumerate(text_to_latent_dataloader):
+# for batch_idx, batch in enumerate(text_to_latent_dataloader):
+for batch_idx, batch in enumerate(latent_to_text_dataloader):
 	batch = {k: v.to(device) for k, v in batch.items()}
 
-	loss = model(input_embeds=batch['input_embeds'], attention_mask=batch['attention_mask'], label_mask=batch['label_mask'])
+	# loss = model(input_embeds=batch['input_embeds'], attention_mask=batch['attention_mask'], label_mask=batch['label_mask'])
+	loss = model(input_embeds=batch['input_embeds'], attention_mask=batch['attention_mask'], labels=batch['labels'])
 
 	progress_bar.set_description(f"Batch: {batch_idx}, Loss: {loss.item()}")
 

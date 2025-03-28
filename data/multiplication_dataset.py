@@ -4,6 +4,40 @@ import torch
 TRAIN_4x4_PATH = "data/multiplication/4x4/train.txt"
 TEST_4x4_PATH = "data/multiplication/4x4/valid.txt"
 
+IGNORE_ID = -100
+
+# not intended to be used directly
+def get_base_dataset(num_train=None, num_proc=None):
+    def preprocess_fn(example):
+        text = example['text']
+
+        question = text.split("||")[0]
+        full_answer = text.split("||")[1]
+        reasoning = full_answer.split("####")[0].strip()
+        answer = full_answer.split("####")[1].strip()
+
+        return {
+            "question": question,
+            "reasoning": reasoning,
+            "answer": answer
+        }
+    
+
+    ds = load_dataset(
+        "text",
+        data_files={
+            "train": TRAIN_4x4_PATH,
+            "test": TEST_4x4_PATH,
+        },
+    )
+
+    if num_train != None:
+        ds["train"] = ds["train"].select(range(num_train))
+
+    ds = ds.map(preprocess_fn, batched=False, num_proc=num_proc, remove_columns=['text'])
+    
+    return ds
+
 def get_4x4_multiplication_dataset(tokenizer, num_train=None, num_proc=None):
     def preprocess_fn(examples):
         questions = [example.split("||")[0] + '||' for example in examples['text']] # TODO change to \n and then use same base dataset of QRA
@@ -23,7 +57,7 @@ def get_4x4_multiplication_dataset(tokenizer, num_train=None, num_proc=None):
             question_attention_mask = questions_tokenized['attention_mask'][i]
             answer_attention_mask = answers_tokenized['attention_mask'][i] + [1]
             
-            labels.append([-100] * len(question_input_ids) + answer_input_ids) # -100 is the ignore token for cross entropy loss
+            labels.append([IGNORE_ID] * len(question_input_ids) + answer_input_ids) 
             input_ids.append(question_input_ids + answer_input_ids)
             attention_mask.append(question_attention_mask + answer_attention_mask)
 
@@ -58,8 +92,8 @@ def get_text_to_latent_dataset(tokenizer, embedding, start_latent_id,
         
         reasonings = [full_answer.split("####")[0].strip() for full_answer in full_answers]
 
-        question_tokens = tokenizer(questions, return_tensors="pt")
-        reasoning_tokens = tokenizer(reasonings, return_tensors="pt")
+        question_tokens = tokenizer(questions, return_tensors="pt", add_special_tokens=True)
+        reasoning_tokens = tokenizer(reasonings, return_tensors="pt", add_special_tokens=False)
 
         question_embeddings = embedding(question_tokens['input_ids'])
         reasoning_embeddings = embedding(reasoning_tokens['input_ids'])
@@ -92,6 +126,7 @@ def get_text_to_latent_dataset(tokenizer, embedding, start_latent_id,
             torch.ones(batch_size, latent_reasoning_length + 1)
         ), dim=1)
 
+
         assert input_embeds.shape[:-1] == label_mask.shape, f"input_embeds: {input_embeds.shape}, label_mask: {label_mask.shape}"
 
         return {
@@ -117,10 +152,94 @@ def get_text_to_latent_dataset(tokenizer, embedding, start_latent_id,
 
     return ds
 
+def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent_id, 
+                               start_cot_id, end_cot_id, num_proc=None, latent_pool = 10, num_train=None):
+    start_latent_embedding = embedding(torch.tensor(start_latent_id))
+    end_latent_embedding = embedding(torch.tensor(end_latent_id))
+
+    start_cot_embedding = embedding(torch.tensor(start_cot_id))
+    end_cot_embedding = embedding(torch.tensor(end_cot_id))
+
+    def preprocess_fn(example):
+        reasoning = example['reasoning']
+        
+        reasoning_ids = tokenizer.encode(reasoning, return_tensors="pt", add_special_tokens=False)[0] # remove batch dimension
+        reasoning_embeddings = embedding(reasoning_ids) 
+
+        reasoning_length, latent_dim = reasoning_embeddings.shape
+        latent_reasoning_length = (reasoning_length // latent_pool) + 1
+
+        latent_reasoning_embeddings = torch.zeros(latent_reasoning_length, latent_dim)
+        
+        for i in range(0, reasoning_length, latent_pool):
+            latent_reasoning_embeddings[i // latent_pool, :] = reasoning_embeddings[i:i+latent_pool, :].mean(dim=0)
+        
+        input_embeds = torch.cat((
+            start_latent_embedding.unsqueeze(0), # turning it into 1 x latent_dim
+            latent_reasoning_embeddings,
+            end_latent_embedding.unsqueeze(0),
+            start_cot_embedding.unsqueeze(0),
+            reasoning_embeddings,
+            end_cot_embedding.unsqueeze(0)
+        ), dim=0)
+
+        attention_mask = torch.ones(input_embeds.shape[:-1])
+        labels = torch.cat((
+            torch.full(((3+latent_reasoning_length,)), IGNORE_ID),  # ignore start_latent, end_latent, and start_cot
+            reasoning_ids, 
+            torch.tensor(end_cot_id).reshape(1)))
+
+        assert labels.shape[0] == input_embeds.shape[0]
+
+        return {
+            'input_embeds': input_embeds,
+            'attention_mask': attention_mask,
+            'labels': labels
+        }
+
+    ds = get_base_dataset(num_train, num_proc)
+
+    ds = ds.map(preprocess_fn, batched=False, num_proc=num_proc)
+    ds.set_format('pt')
+
+    return ds
+
+def collate_fn(batch):
+    max_seq_len = max(example['input_embeds'].shape[0] for example in batch)
+    latent_dim = batch[0]['input_embeds'].shape[1]
+
+    for example in batch:
+        seq_len = example['input_embeds'].shape[0]
+
+        example['input_embeds'] = torch.cat((
+            example['input_embeds'], 
+            torch.zeros((max_seq_len - seq_len, latent_dim))
+        ))
+
+        example['attention_mask'] = torch.cat((
+            example['attention_mask'],
+            torch.zeros((max_seq_len - seq_len,))
+        ))
+
+        example['labels'] = torch.cat((
+            example['labels'],
+            torch.full((max_seq_len - seq_len,), IGNORE_ID) 
+        ))
+
+    input_embeds = torch.stack([example['input_embeds'] for example in batch])
+    attention_mask = torch.stack([example['attention_mask'] for example in batch])
+    labels = torch.stack([example['labels'] for example in batch])
+
+    return {
+        'input_embeds': input_embeds,
+        'attention_mask': attention_mask,
+        'labels': labels
+    }
+
 
 # dont have the base model follow the reverse digit instructions
 def format_multiplication_example_base_model(example):
-    text = example["text"]
+    text = example["text"][0] # removing batch dimension
 
     question = text.split("||")[0].strip()
     num_1 = question.split("*")[0].strip().replace(" ", "")

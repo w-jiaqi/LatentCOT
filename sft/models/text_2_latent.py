@@ -2,14 +2,15 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-
 class Text2Latent(nn.Module):
 	def __init__(self, model, tokenizer):
 		super(Text2Latent, self).__init__()
 
 		self.model = model
-		self.embedding = model.get_input_embeddings()
 		self.tokenizer = tokenizer
+
+	def parameters(self):
+		return self.model.parameters()
 
 	def forward(self, input_embeds, attention_mask, label_mask):
 		src_embeds = input_embeds[:, :-1, :]
