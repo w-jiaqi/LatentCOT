@@ -166,14 +166,13 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
     end_cot_embedding = embedding(torch.tensor(end_cot_id))
 
     def preprocess_fn(batch):
-        example = batch[0] # batch size of 1
-        reasoning = example['reasoning']
-        answer = example['answer']
+        reasoning = batch['reasoning'][0] # batch size of 1
+        answer = batch['answer'][0]
         
         reasoning_ids = tokenizer.encode(reasoning, return_tensors="pt", add_special_tokens=False)[0] # remove batch dimension
-        reasoning_embeddings = embedding(reasoning_ids) 
-
         answer_ids = tokenizer.encode(answer, return_tensors="pt", add_special_tokens=False)[0]
+
+        reasoning_embeddings = embedding(reasoning_ids) 
         answer_embeddings = embedding(answer_ids)
 
         latent_reasoning_length, latent_reasoning_embeddings = compress_embeddings(reasoning_embeddings, latent_pool)
@@ -208,8 +207,8 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
             answer_ids,
         ))
 
-        assert cot_labels.shape[0] == ans_input_embeds.shape[0]
-        assert ans_labels.shape[0] == ans_input_embeds.shape[0]
+        assert cot_input_embeds.shape[0] == cot_labels.shape[0]
+        assert ans_input_embeds.shape[0] == ans_labels.shape[0]
 
         input_embeds = [cot_input_embeds, ans_input_embeds]
         attention_mask = [cot_attention_mask, ans_attention_mask]
