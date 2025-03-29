@@ -35,7 +35,7 @@ parser.add_argument(
 	"--batch_num", type=int, default=32
 )
 parser.add_argument(
-	"--num_proc", type=int, default=8
+	"--num_proc", type=int, default=None
 )
 
 args = parser.parse_args()
