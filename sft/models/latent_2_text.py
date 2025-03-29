@@ -1,10 +1,10 @@
 import torch
 from transformers import AutoModelForCausalLM
 from torch import nn
-import torch.nn.functional as F
+from sft.models.latent_tokenizer import LatentTokenizer
 
 class Latent2Text(nn.Module):
-	def __init__(self, model_id, tokenizer):
+	def __init__(self, model_id: str, tokenizer: LatentTokenizer):
 		super(Latent2Text, self).__init__()
 
 		self.model = AutoModelForCausalLM.from_pretrained(model_id)
@@ -16,14 +16,14 @@ class Latent2Text(nn.Module):
 	def parameters(self):
 		return self.model.parameters()
 	
-	def forward(self, inputs_embeds, attention_mask, labels):
+	def forward(self, inputs_embeds: torch.Tensor, attention_mask: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
 		src_inputs_embeds = inputs_embeds[:, :-1, :]
 		src_attention_mask = attention_mask[:, :-1]
 
 		outputs = self.model(
 			inputs_embeds = src_inputs_embeds,
 			attention_mask = src_attention_mask
-		)
+		) # TODO: try just setting labels = labels and returning outputs.loss
 
 		logits = outputs.logits
 		pred_logits = logits.view(-1, logits.shape[-1])
@@ -35,11 +35,11 @@ class Latent2Text(nn.Module):
 		return loss
 
 	# inputs_embeds should be batch_dim * seq_len * latent_dim
-	def generate(self, inputs_embeds, max_new_tokens=128, start_cot_id=None):
-		if start_cot_id:
+	def generate(self, inputs_embeds: torch.Tensor, output_cot=False, max_new_tokens: int=128) -> str:
+		if output_cot:
 			inputs_embeds = torch.cat((
 				inputs_embeds,
-				self.embedding(torch.tensor(start_cot_id)).reshape(1,1,-1)
+				self.embedding(torch.tensor(self.tokenizer.start_cot_id)).reshape(1,1,-1)
 			), dim=1)
 
 		attention_mask = torch.ones(inputs_embeds.shape[:-1])
@@ -54,7 +54,7 @@ class Latent2Text(nn.Module):
 
 		return generated_text
 	
-	def save_pretrained(self, path):
+	def save_pretrained(self, path: str):
 		self.model.save_pretrained(path)
 
 

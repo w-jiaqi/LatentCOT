@@ -2,8 +2,10 @@ import sys, os
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
 from data.dataset import compress_embeddings
-from datasets import load_dataset
+from datasets import load_dataset, DatasetDict, Dataset
 import torch
+from sft.models.latent_tokenizer import LatentTokenizer
+from transformers import PreTrainedTokenizerFast
 
 TRAIN_4x4_PATH = "data/multiplication/4x4/train.txt"
 TEST_4x4_PATH = "data/multiplication/4x4/valid.txt"
@@ -11,7 +13,7 @@ TEST_4x4_PATH = "data/multiplication/4x4/valid.txt"
 IGNORE_ID = -100
 
 # not intended to be used directly
-def get_base_dataset(num_train=None, num_proc=None):
+def get_base_dataset(num_train: int | None = None, num_proc: int | None = None) -> DatasetDict | Dataset:
     def preprocess_fn(example):
         text = example['text']
 
@@ -43,7 +45,7 @@ def get_base_dataset(num_train=None, num_proc=None):
     return ds
 
 # labels, input_ids, attention_mask
-def get_cot_sft_dataset(tokenizer, num_train=None, num_proc=None):
+def get_cot_sft_dataset(tokenizer: PreTrainedTokenizerFast, num_train: int | None = None, num_proc: int | None = None) -> DatasetDict | Dataset:
     def preprocess_fn(examples):
         questions = [example.split("||")[0] + '||' for example in examples['text']] # TODO change to \n and then use same base dataset of QRA
         answers = [example.split("||")[1] for example in examples['text']]
@@ -85,10 +87,10 @@ def get_cot_sft_dataset(tokenizer, num_train=None, num_proc=None):
 
 # note: i dont think the way we preprocess here will work for gsm8k because 
 # we can't batch process the latents (they will all be different lengths)
-def get_text_to_latent_dataset(tokenizer, embedding, start_latent_id, 
-                                          end_latent_id, num_proc=None, latent_pool=10, num_train=None):
-    start_latent_embedding = embedding(torch.tensor(start_latent_id))
-    end_latent_embedding = embedding(torch.tensor(end_latent_id))
+def get_text_to_latent_dataset(tokenizer: LatentTokenizer, embedding: torch.nn.module, 
+                               num_proc: int | None = None, latent_pool: int = 10, num_train: int | None = None) -> DatasetDict | Dataset:
+    start_latent_embedding = embedding(torch.tensor(tokenizer.start_latent_id))
+    end_latent_embedding = embedding(torch.tensor(tokenizer.end_latent_id))
 
     def preprocess_fn(example):
         question = example['question']
@@ -136,13 +138,13 @@ def get_text_to_latent_dataset(tokenizer, embedding, start_latent_id,
 
     return ds
 
-def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent_id, 
-                               start_cot_id, end_cot_id, num_proc=None, latent_pool = 10, num_train=None):
-    start_latent_embedding = embedding(torch.tensor(start_latent_id))
-    end_latent_embedding = embedding(torch.tensor(end_latent_id))
+def get_latent_to_text_dataset(tokenizer: LatentTokenizer, embedding: torch.nn.module,
+                               num_proc: int | None=None, latent_pool: int = 10, num_train: int | None=None) -> DatasetDict | Dataset:
+    start_latent_embedding = embedding(torch.tensor(tokenizer.start_latent_id))
+    end_latent_embedding = embedding(torch.tensor(tokenizer.end_latent_id))
 
-    start_cot_embedding = embedding(torch.tensor(start_cot_id))
-    end_cot_embedding = embedding(torch.tensor(end_cot_id))
+    start_cot_embedding = embedding(torch.tensor(tokenizer.start_cot_id))
+    end_cot_embedding = embedding(torch.tensor(tokenizer.end_cot_id))
 
     bos_embedding = embedding(torch.tensor(tokenizer.bos_token_id))
     eos_embedding = embedding(torch.tensor(tokenizer.eos_token_id))
@@ -185,7 +187,7 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
         cot_labels = torch.cat((
             torch.full(((4 + latent_reasoning_length,)), IGNORE_ID),  # ignore bos, start_latent, end_latent, and start_cot
             reasoning_ids,
-            torch.tensor(end_cot_id).unsqueeze(0),
+            torch.tensor(tokenizer.end_cot_id).unsqueeze(0),
             torch.tensor(tokenizer.eos_token_id).unsqueeze(0)
         ))
 

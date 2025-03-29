@@ -2,9 +2,10 @@ import torch
 from transformers import AutoModelForCausalLM
 from torch import nn
 import torch.nn.functional as F
+from sft.models.latent_tokenizer import LatentTokenizer
 
 class Text2Latent(nn.Module):
-	def __init__(self, model_id, tokenizer):
+	def __init__(self, model_id: str, tokenizer: LatentTokenizer):
 		super(Text2Latent, self).__init__()
 
 		self.model = AutoModelForCausalLM.from_pretrained(model_id)
@@ -16,7 +17,7 @@ class Text2Latent(nn.Module):
 	def parameters(self):
 		return self.model.parameters()
 
-	def forward(self, inputs_embeds, attention_mask, label_mask):
+	def forward(self, inputs_embeds: torch.Tensor, attention_mask: torch.Tensor, label_mask: torch.Tensor) -> torch.Tensor:
 		src_embeds = inputs_embeds[:, :-1, :]
 		tgt_embeds = inputs_embeds[:, 1:, :] 
 
@@ -43,17 +44,17 @@ class Text2Latent(nn.Module):
 
 		return loss
 
-	def generate(self, prompt, max_new_embeds, start_latent, end_latent):
+	def generate(self, prompt: str, max_new_embeds: int) -> torch.Tensor:
 		prompt_ids = self.tokenizer.encode(prompt, return_tensors="pt")
 		prompt_embeddings = self.embedding(prompt_ids)
 
 		bos_embedding = self.embedding(torch.tensor(self.tokenizer.bos_token_id))
 		bos_embedding_col = bos_embedding.reshape(1, 1, -1) # batch_size * seq_len * latent_dim
 
-		start_latent_embedding = self.embedding(torch.tensor(start_latent))
+		start_latent_embedding = self.embedding(torch.tensor(self.tokenizer.start_latent_id))
 		start_latent_embedding_col = start_latent_embedding.reshape(1, 1, -1)
 
-		end_latent_embedding = self.embedding(torch.tensor(end_latent))
+		end_latent_embedding = self.embedding(torch.tensor(self.tokenizer.end_latent_id))
 		end_latent_embedding_col = end_latent_embedding.reshape(1, 1, -1)
 
 		inputs_embeds = torch.cat((
@@ -81,7 +82,7 @@ class Text2Latent(nn.Module):
 
 			_, greedy_index = torch.max(outputs.logits[0, -1], dim=0) # ignore batch dim, get last prediction
 
-			if greedy_index == end_latent:
+			if greedy_index == self.tokenizer.end_latent_id:
 				break
 
 			last_hidden_state = outputs.hidden_states[-1] # hidden states of last layer
@@ -103,5 +104,5 @@ class Text2Latent(nn.Module):
 		), dim=1)
 
 
-	def save_pretrained(self, path):
+	def save_pretrained(self, path: str):
 		self.model.save_pretrained(path)

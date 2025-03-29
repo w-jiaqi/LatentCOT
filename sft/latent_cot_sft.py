@@ -9,6 +9,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from data.multiplication_dataset import get_text_to_latent_dataset, get_latent_to_text_dataset, collate_fn
 from sft.models.text_2_latent import Text2Latent
 from sft.models.latent_2_text import Latent2Text
+from sft.models.latent_tokenizer import LatentTokenizer
 from tqdm.auto import tqdm
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -41,38 +42,21 @@ checkpoints_path = os.path.join(
 
 model_id = args.model
 
-tokenizer = AutoTokenizer.from_pretrained(model_id)
+tokenizer = LatentTokenizer(model_id)
 
-start_latent_string = "<|start-latent|>"
-end_latent_string = "<|end-latent|>"
-start_cot_string = "<|start-cot|>"
-end_cot_string = "<|end-cot|>"
-
-tokenizer.add_tokens(start_latent_string)
-tokenizer.add_tokens(end_latent_string)
-tokenizer.add_tokens(start_cot_string)
-tokenizer.add_tokens(end_cot_string)
-
-start_latent_id = tokenizer.convert_tokens_to_ids(start_latent_string)
-end_latent_id = tokenizer.convert_tokens_to_ids(end_latent_string)
-start_cot_id = tokenizer.convert_tokens_to_ids(start_cot_string)
-end_cot_id = tokenizer.convert_tokens_to_ids(end_cot_string)
 
 model = Text2Latent(model_id, tokenizer)
 # model = Latent2Text(model_id, tokenizer)
 
 text_to_latent_ds = get_text_to_latent_dataset(
-	tokenizer, 
-	model.embedding, 
-	start_latent_id, end_latent_id, 
+	tokenizer=tokenizer, 
+	embedding=model.embedding, 
 	latent_pool=args.latent_pool, num_train=args.num_train
 )
 
 latent_to_text_ds = get_latent_to_text_dataset(
 	tokenizer=tokenizer,
 	embedding=model.embedding,
-	start_latent_id=start_latent_id, end_latent_id=end_latent_id,
-	start_cot_id=start_cot_id, end_cot_id=end_cot_id,
 	latent_pool=args.latent_pool, num_train=args.num_train
 )
 
