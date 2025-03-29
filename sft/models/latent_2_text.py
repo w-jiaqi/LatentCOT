@@ -56,5 +56,3 @@ class Latent2Text(nn.Module):
 	
 	def save_pretrained(self, path: str):
 		self.model.save_pretrained(path)
-
-

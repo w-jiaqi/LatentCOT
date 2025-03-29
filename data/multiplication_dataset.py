@@ -6,6 +6,7 @@ from datasets import load_dataset, DatasetDict, Dataset
 import torch
 from sft.models.latent_tokenizer import LatentTokenizer
 from transformers import PreTrainedTokenizerFast
+from typing import Union, Optional
 
 TRAIN_4x4_PATH = "data/multiplication/4x4/train.txt"
 TEST_4x4_PATH = "data/multiplication/4x4/valid.txt"
@@ -13,7 +14,7 @@ TEST_4x4_PATH = "data/multiplication/4x4/valid.txt"
 IGNORE_ID = -100
 
 # not intended to be used directly
-def get_base_dataset(num_train: int | None = None, num_proc: int | None = None) -> DatasetDict | Dataset:
+def get_base_dataset(num_train: Optional[int] = None, num_proc: Optional[int] = None) -> Union[DatasetDict, Dataset]:
     def preprocess_fn(example):
         text = example['text']
 
@@ -45,7 +46,7 @@ def get_base_dataset(num_train: int | None = None, num_proc: int | None = None) 
     return ds
 
 # labels, input_ids, attention_mask
-def get_cot_sft_dataset(tokenizer: PreTrainedTokenizerFast, num_train: int | None = None, num_proc: int | None = None) -> DatasetDict | Dataset:
+def get_cot_sft_dataset(tokenizer: PreTrainedTokenizerFast, num_train: Optional[int] = None, num_proc: Optional[int] = None) -> Union[DatasetDict, Dataset]:
     def preprocess_fn(examples):
         questions = [example.split("||")[0] + '||' for example in examples['text']] # TODO change to \n and then use same base dataset of QRA
         answers = [example.split("||")[1] for example in examples['text']]
@@ -87,8 +88,8 @@ def get_cot_sft_dataset(tokenizer: PreTrainedTokenizerFast, num_train: int | Non
 
 # note: i dont think the way we preprocess here will work for gsm8k because 
 # we can't batch process the latents (they will all be different lengths)
-def get_text_to_latent_dataset(tokenizer: LatentTokenizer, embedding: torch.nn.module, 
-                               num_proc: int | None = None, latent_pool: int = 10, num_train: int | None = None) -> DatasetDict | Dataset:
+def get_text_to_latent_dataset(tokenizer: LatentTokenizer, embedding: torch.nn.Module, 
+                               num_proc: Optional[int] = None, latent_pool: int = 10, num_train: Optional[int] = None) -> Union[DatasetDict, Dataset]:
     start_latent_embedding = embedding(torch.tensor(tokenizer.start_latent_id))
     end_latent_embedding = embedding(torch.tensor(tokenizer.end_latent_id))
 
@@ -138,8 +139,8 @@ def get_text_to_latent_dataset(tokenizer: LatentTokenizer, embedding: torch.nn.m
 
     return ds
 
-def get_latent_to_text_dataset(tokenizer: LatentTokenizer, embedding: torch.nn.module,
-                               num_proc: int | None=None, latent_pool: int = 10, num_train: int | None=None) -> DatasetDict | Dataset:
+def get_latent_to_text_dataset(tokenizer: LatentTokenizer, embedding: torch.nn.Module,
+                               num_proc: Optional[int] = None, latent_pool: int = 10, num_train: Optional[int] = None) -> Union[DatasetDict, Dataset]:
     start_latent_embedding = embedding(torch.tensor(tokenizer.start_latent_id))
     end_latent_embedding = embedding(torch.tensor(tokenizer.end_latent_id))
 

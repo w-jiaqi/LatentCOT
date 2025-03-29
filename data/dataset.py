@@ -2,7 +2,7 @@ import torch
 from datasets import load_dataset
 from trl import apply_chat_template
 
-def compress_embeddings(embeddings, latent_pool):
+def compress_embeddings(embeddings: torch.nn.Module, latent_pool: torch.tensor) -> torch.tensor:
     seq_length, latent_dim = embeddings.shape
     latent_seq_length = (seq_length // latent_pool) + 1
 
@@ -13,7 +13,6 @@ def compress_embeddings(embeddings, latent_pool):
 
 
     return latent_seq_length, latent_embeddings
-
 
 def get_gsm8k_dataset(tokenizer):
     def format_gsm8k_example(example):
