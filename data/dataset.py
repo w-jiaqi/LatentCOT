@@ -198,7 +198,7 @@ def get_latent_to_text_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: 
             'labels': labels
         }
 
-    dataset = dataset.map(preprocess_fn, batched=True, batch_size=1, num_proc=num_proc, remove_columns=ds['train'].column_names)
+    dataset = dataset.map(preprocess_fn, batched=True, batch_size=1, num_proc=num_proc, remove_columns=dataset['train'].column_names)
     dataset.set_format('pt')
 
     return dataset
