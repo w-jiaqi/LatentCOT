@@ -9,7 +9,7 @@ HF_TOKEN=$1
 
 srun --container-image=/lustre/fs0/scratch/pkeung/squash/nvidia+pytorch+24.10-py3.sqsh \
      --container-mounts=/lustre/fs0 \
-     bash -c "cd/lustre/fs0/scratch/pkeung/multiplication/LatentCOT && \
+     bash -c "cd /lustre/fs0/scratch/pkeung/multiplication/LatentCOT && \
 			 source env/bin/activate && \
              export HF_HOME=$PWD/hf_cache && \
              export HF_TOKEN=$HF_TOKEN && \
