@@ -5,11 +5,12 @@ import torch
 from torch.utils.data import DataLoader
 import argparse
 from utils import utils
-from data.multiplication_dataset import get_text_to_latent_dataset, get_latent_to_text_dataset, collate_fn
+from data.dataset import get_text_to_latent_dataset, get_latent_to_text_dataset, collate_fn
 from sft.models.text_2_latent import Text2Latent
 from sft.models.latent_2_text import Latent2Text
 from sft.models.latent_tokenizer import LatentTokenizer
 from tqdm.auto import tqdm
+from data.multiplication_dataset import get_4x4_dataset
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if device == 'cpu':
@@ -33,6 +34,9 @@ parser.add_argument(
 parser.add_argument(
 	"--batch_num", type=int, default=32
 )
+parser.add_argument(
+	"--num_proc", type=int, default=8
+)
 
 args = parser.parse_args()
 
@@ -41,21 +45,23 @@ base_checkpoints_path = os.path.join(
 	args.dataset, 
 )
 
+cur_time_string = utils.get_cur_time_string()
+
 text_to_latent_checkpoints_path = os.path.join(
 	base_checkpoints_path,
-	utils.get_cur_time_string(),
+	cur_time_string,
 	"text_to_latent",
 )
 
 latent_to_text_checkpoints_path = os.path.join(
 	base_checkpoints_path,
-	utils.get_cur_time_string(),
+	cur_time_string,
 	"latent_to_text",
 )
 
 tokenizer_checkpoints_path = os.path.join(
 	base_checkpoints_path,
-	utils.get_cur_time_string(),
+	cur_time_string,
 	"tokenizer",
 )
 
@@ -69,18 +75,20 @@ tokenizer = LatentTokenizer(model_id)
 text_to_latent_model = Text2Latent(model_id, tokenizer)
 latent_to_text_model = Latent2Text(model_id, tokenizer)
 
+base_ds = get_4x4_dataset(num_train=args.num_train, num_proc=args.num_proc) if args.dataset == "4x4" else None
+
 text_to_latent_ds = get_text_to_latent_dataset(
+	dataset=base_ds,
 	tokenizer=tokenizer, 
 	embedding=text_to_latent_model.embedding, 
 	latent_pool=args.latent_pool, 
-	num_train=args.num_train
 )
 
 latent_to_text_ds = get_latent_to_text_dataset(
+	dataset=base_ds,
 	tokenizer=tokenizer, 
 	embedding=latent_to_text_model.embedding, 
 	latent_pool=args.latent_pool, 
-	num_train=args.num_train
 )
 
 def train_model(model, dataset, checkpoints_path):
