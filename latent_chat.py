@@ -38,10 +38,11 @@ while True:
 
 	embedding = model.get_input_embeddings()
 	inputs_embeds = (torch.cat((
+		embedding(torch.tensor(tokenizer.bos_token_id)).unsqueeze(0),
 		embedding(torch.tensor(start_latent_id)).unsqueeze(0), 
 		compress_embeddings(embedding(input_ids)[0], args.latent_pool)[1],
 		embedding(torch.tensor(end_latent_id)).unsqueeze(0),
-		embedding(torch.tensor(start_cot_id)).unsqueeze(0)
+		# embedding(torch.tensor(start_cot_id)).unsqueeze(0),
 	))).unsqueeze(0)
 	
 	attention_mask = torch.ones(inputs_embeds.shape[:-1])

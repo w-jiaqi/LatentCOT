@@ -69,14 +69,14 @@ model = Latent2Text(model_id, tokenizer)
 # )
 
 latent_to_text_ds = get_latent_to_text_dataset(
-	tokenizer,
-	model.embedding(),
-	start_latent_id, end_latent_id,
-	start_cot_id, end_cot_id,
+	tokenizer=tokenizer,
+	embedding=model.embedding(),
+	start_latent_id=start_latent_id, end_latent_id=end_latent_id,
+	start_cot_id=start_cot_id, end_cot_id=end_cot_id,
 	latent_pool=args.latent_pool, num_train=args.num_train
 )
 
-optim = torch.optim.Adam(model.parameters(), lr=1e-5)
+optim = torch.optim.AdamW(model.parameters(), lr=1e-4)
 
 # text_to_latent_dataloader = DataLoader(text_to_latent_ds['train'], batch_size=32)
 latent_to_text_dataloader = DataLoader(latent_to_text_ds['train'], collate_fn=collate_fn, batch_size=32)

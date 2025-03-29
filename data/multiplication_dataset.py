@@ -165,6 +165,9 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
     start_cot_embedding = embedding(torch.tensor(start_cot_id))
     end_cot_embedding = embedding(torch.tensor(end_cot_id))
 
+    bos_embedding = embedding(torch.tensor(tokenizer.bos_token_id))
+    eos_embedding = embedding(torch.tensor(tokenizer.eos_token_id))
+
     def preprocess_fn(batch):
         reasoning = batch['reasoning'][0] # batch size of 1
         answer = batch['answer'][0]
@@ -178,33 +181,39 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
         latent_reasoning_length, latent_reasoning_embeddings = compress_embeddings(reasoning_embeddings, latent_pool)
         
         cot_input_embeds = torch.cat((
+            bos_embedding.unsqueeze(0),
             start_latent_embedding.unsqueeze(0), # turning it into 1 x latent_dim
             latent_reasoning_embeddings,
             end_latent_embedding.unsqueeze(0),
             start_cot_embedding.unsqueeze(0),
             reasoning_embeddings,
-            end_cot_embedding.unsqueeze(0)
+            end_cot_embedding.unsqueeze(0),
+            eos_embedding.unsqueeze(0)
         ), dim=0)
 
         ans_input_embeds = torch.cat((
+            bos_embedding.unsqueeze(0),
             start_latent_embedding.unsqueeze(0),
             latent_reasoning_embeddings,
             end_latent_embedding.unsqueeze(0),
             answer_embeddings,
+            eos_embedding.unsqueeze(0)
         ), dim=0)
 
         cot_attention_mask = torch.ones(cot_input_embeds.shape[:-1]) # ignore latent_dim
         ans_attention_mask = torch.ones(ans_input_embeds.shape[:-1])
 
         cot_labels = torch.cat((
-            torch.full(((3+latent_reasoning_length,)), IGNORE_ID),  # ignore start_latent, end_latent, and start_cot
+            torch.full(((4 + latent_reasoning_length,)), IGNORE_ID),  # ignore bos, start_latent, end_latent, and start_cot
             reasoning_ids,
-            torch.tensor(end_cot_id).unsqueeze(0)
+            torch.tensor(end_cot_id).unsqueeze(0),
+            torch.tensor(tokenizer.eos_token_id).unsqueeze(0)
         ))
 
         ans_labels = torch.cat((
-            torch.full(((2+latent_reasoning_length,)), IGNORE_ID), # ignore start_latent, end_latent
+            torch.full(((3+latent_reasoning_length,)), IGNORE_ID), # ignore bos, start_latent, end_latent
             answer_ids,
+            torch.tensor(tokenizer.eos_token_id).unsqueeze(0)
         ))
 
         assert cot_input_embeds.shape[0] == cot_labels.shape[0]
