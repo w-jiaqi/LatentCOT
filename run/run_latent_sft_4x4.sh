@@ -15,8 +15,6 @@ srun --container-image=/lustre/fs0/scratch/pkeung/squash/nvidia+pytorch+24.10-py
              export HF_TOKEN=$HF_TOKEN && \
              export TRANSFORMERS_CACHE=$PWD/hf_cache/transformers && \
              export HF_DATASETS_CACHE=$PWD/hf_cache/datasets && \
-             python sft/latent_cot_sft.py \
-                 -l 4 \
-				 -d 4x4 \"
+             python sft/latent_cot_sft.py -l 4 -d 4x4"
 
 # usage: sbatch run_latent_sft_4x4.sh hf_token
