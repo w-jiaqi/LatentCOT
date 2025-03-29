@@ -3,11 +3,18 @@
 test file for chatting with the latent model
 
 '''
+import sys, os
+sys.path.insert(0, os.path.abspath("."))  # hack for imports
+
+from sft.models.latent_2_text import Latent2Text
+from sft.models.text_2_latent import Text2Latent
+
 import torch
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
 )
+
 import argparse
 from data.dataset import compress_embeddings
 
@@ -15,7 +22,11 @@ torch.set_default_device('cuda')
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "-m", "--model_path", type=str, required=True,
+    "-e", "--text_to_latent", type=str, required=True,
+)
+
+parser.add_argument(
+    "-d", "--latent_to_text", type=str, required=True,
 )
 
 parser.add_argument(
@@ -24,8 +35,10 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-model = AutoModelForCausalLM.from_pretrained(args.model_path)
-tokenizer = AutoTokenizer.from_pretrained(args.model_path)
+tokenizer = AutoTokenizer.from_pretrained("checkpoints/latent-cot-sft/4x4/latent_to_text")
+
+text_to_latent = Text2Latent(model_id=args.text_to_latent, tokenizer=tokenizer)
+latent_to_text = Latent2Text(model_id=args.latent_to_text, tokenizer=tokenizer)
 
 start_latent_id = tokenizer.convert_tokens_to_ids("<|start-latent|>")
 end_latent_id = tokenizer.convert_tokens_to_ids("<|end-latent|>")
@@ -34,23 +47,13 @@ end_cot_id = tokenizer.convert_tokens_to_ids("<|end-cot|>")
 
 while True:
 	prompt = input()
-	input_ids = tokenizer(prompt, return_tensors='pt').input_ids
 
-	embedding = model.get_input_embeddings()
-	inputs_embeds = (torch.cat((
-		embedding(torch.tensor(tokenizer.bos_token_id)).unsqueeze(0),
-		embedding(torch.tensor(start_latent_id)).unsqueeze(0), 
-		compress_embeddings(embedding(input_ids)[0], args.latent_pool)[1],
-		embedding(torch.tensor(end_latent_id)).unsqueeze(0),
-		embedding(torch.tensor(start_cot_id)).unsqueeze(0),
-	))).unsqueeze(0)
+	print(latent_to_text.generate(
+		text_to_latent.generate(
+			prompt, 
+			max_new_embeds=20, 
+			start_latent=start_latent_id, 
+			end_latent=end_latent_id), 
+        start_cot_id=None
+    ))
 	
-	attention_mask = torch.ones(inputs_embeds.shape[:-1])
-
-	print(inputs_embeds.shape)
-	print(attention_mask.shape)
-
-	output = model.generate(inputs_embeds=inputs_embeds, attention_mask=attention_mask, max_new_tokens=256)
-	generated_text = tokenizer.decode(output[0])
-
-	print(generated_text)

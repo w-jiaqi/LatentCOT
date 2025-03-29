@@ -90,69 +90,48 @@ def get_text_to_latent_dataset(tokenizer, embedding, start_latent_id,
     start_latent_embedding = embedding(torch.tensor(start_latent_id))
     end_latent_embedding = embedding(torch.tensor(end_latent_id))
 
-    def preprocess_fn(examples):
-        texts = examples['text']
-        questions = [example.split("||")[0] + '||' for example in texts]
-        full_answers = [example.split("||")[1] for example in texts]
-        
-        reasonings = [full_answer.split("####")[0].strip() for full_answer in full_answers]
+    def preprocess_fn(example):
+        question = example['question']
+        reasoning = example['reasoning']
 
-        question_tokens = tokenizer(questions, return_tensors="pt", add_special_tokens=True)
-        reasoning_tokens = tokenizer(reasonings, return_tensors="pt", add_special_tokens=False)
+        question_ids = tokenizer.encode(question, return_tensors="pt", add_special_tokens=True)[0] # remove batch dimension
+        reasoning_ids = tokenizer.encode(reasoning, return_tensors="pt", add_special_tokens=False)[0] 
 
-        question_embeddings = embedding(question_tokens['input_ids'])
-        reasoning_embeddings = embedding(reasoning_tokens['input_ids'])
+        question_embeddings = embedding(question_ids)
+        reasoning_embeddings = embedding(reasoning_ids)
 
-        batch_size, reasoning_length, latent_dim = reasoning_embeddings.shape
-        latent_reasoning_length = (reasoning_length // latent_pool) + 1
+        latent_reasoning_length, latent_reasoning_embeddings = compress_embeddings(reasoning_embeddings, latent_pool)
 
-        latent_reasoning_embeddings = torch.zeros(batch_size, latent_reasoning_length, latent_dim)
-        
-        for i in range(0, reasoning_length, latent_pool):
-            latent_reasoning_embeddings[:, i // latent_pool, :] = reasoning_embeddings[:, i:i+latent_pool, :].mean(dim=1)
+        start_latent_column = start_latent_embedding.unsqueeze(0)
+        end_latent_column = end_latent_embedding.unsqueeze(0)
 
-        start_latent_column = start_latent_embedding.expand(batch_size, 1, latent_dim)
-        end_latent_column = end_latent_embedding.expand(batch_size, 1, latent_dim)
-
-        assert start_latent_column.shape == end_latent_column.shape == torch.Size([batch_size, 1, latent_dim])
-
-        input_embeds = torch.cat((
+        inputs_embeds = torch.cat((
             question_embeddings, 
             start_latent_column, 
             latent_reasoning_embeddings, 
             end_latent_column
-        ), dim=1)
+        ), dim=0)
 
-        attention_mask = torch.ones(input_embeds.shape[:-1])
+        attention_mask = torch.ones(inputs_embeds.shape[:-1])
         
         # we mask the loss on the start_latent and don't mask on the end latent
         label_mask = torch.cat((
-            torch.zeros(batch_size, question_embeddings.shape[1] + 1), 
-            torch.ones(batch_size, latent_reasoning_length + 1)
-        ), dim=1)
+            torch.zeros(question_embeddings.shape[0] + 1), 
+            torch.ones(latent_reasoning_length + 1)
+        ), dim=0)
 
-
-        assert input_embeds.shape[:-1] == label_mask.shape, f"input_embeds: {input_embeds.shape}, label_mask: {label_mask.shape}"
+        assert inputs_embeds.shape[:-1] == label_mask.shape, f"inputs_embeds: {inputs_embeds.shape}, label_mask: {label_mask.shape}"
 
         return {
-            'input_embeds': input_embeds,
+            'inputs_embeds': inputs_embeds,
             'attention_mask': attention_mask,
             'label_mask': label_mask
         }
 
     
-    ds = load_dataset(
-        "text",
-        data_files={
-            "train": TRAIN_4x4_PATH,
-            "test": TEST_4x4_PATH
-        }
-    )
+    ds = get_base_dataset(num_train, num_proc)
 
-    if num_train != None:
-        ds["train"] = ds["train"].select(range(num_train))
-
-    ds = ds.map(preprocess_fn, batched=True, num_proc=num_proc, remove_columns=['text'])
+    ds = ds.map(preprocess_fn, batched=False, num_proc=num_proc, remove_columns=ds['train'].column_names)
     ds.set_format("pt")
 
     return ds
@@ -180,7 +159,7 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
 
         latent_reasoning_length, latent_reasoning_embeddings = compress_embeddings(reasoning_embeddings, latent_pool)
         
-        cot_input_embeds = torch.cat((
+        cot_inputs_embeds = torch.cat((
             bos_embedding.unsqueeze(0),
             start_latent_embedding.unsqueeze(0), # turning it into 1 x latent_dim
             latent_reasoning_embeddings,
@@ -191,7 +170,7 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
             eos_embedding.unsqueeze(0)
         ), dim=0)
 
-        ans_input_embeds = torch.cat((
+        ans_inputs_embeds = torch.cat((
             bos_embedding.unsqueeze(0),
             start_latent_embedding.unsqueeze(0),
             latent_reasoning_embeddings,
@@ -200,8 +179,8 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
             eos_embedding.unsqueeze(0)
         ), dim=0)
 
-        cot_attention_mask = torch.ones(cot_input_embeds.shape[:-1]) # ignore latent_dim
-        ans_attention_mask = torch.ones(ans_input_embeds.shape[:-1])
+        cot_attention_mask = torch.ones(cot_inputs_embeds.shape[:-1]) # ignore latent_dim
+        ans_attention_mask = torch.ones(ans_inputs_embeds.shape[:-1])
 
         cot_labels = torch.cat((
             torch.full(((4 + latent_reasoning_length,)), IGNORE_ID),  # ignore bos, start_latent, end_latent, and start_cot
@@ -216,15 +195,15 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
             torch.tensor(tokenizer.eos_token_id).unsqueeze(0)
         ))
 
-        assert cot_input_embeds.shape[0] == cot_labels.shape[0]
-        assert ans_input_embeds.shape[0] == ans_labels.shape[0]
+        assert cot_inputs_embeds.shape[0] == cot_labels.shape[0]
+        assert ans_inputs_embeds.shape[0] == ans_labels.shape[0]
 
-        input_embeds = [cot_input_embeds, ans_input_embeds]
+        inputs_embeds = [cot_inputs_embeds, ans_inputs_embeds]
         attention_mask = [cot_attention_mask, ans_attention_mask]
         labels = [cot_labels, ans_labels]
 
         return {
-            'input_embeds': input_embeds,
+            'inputs_embeds': inputs_embeds,
             'attention_mask': attention_mask,
             'labels': labels
         }
@@ -237,14 +216,14 @@ def get_latent_to_text_dataset(tokenizer, embedding, start_latent_id, end_latent
     return ds
 
 def collate_fn(batch):
-    max_seq_len = max(example['input_embeds'].shape[0] for example in batch)
-    latent_dim = batch[0]['input_embeds'].shape[1]
+    max_seq_len = max(example['inputs_embeds'].shape[0] for example in batch)
+    latent_dim = batch[0]['inputs_embeds'].shape[1]
 
     for example in batch:
-        seq_len = example['input_embeds'].shape[0]
+        seq_len = example['inputs_embeds'].shape[0]
 
-        example['input_embeds'] = torch.cat((
-            example['input_embeds'], 
+        example['inputs_embeds'] = torch.cat((
+            example['inputs_embeds'], 
             torch.zeros((max_seq_len - seq_len, latent_dim))
         ))
 
@@ -258,12 +237,12 @@ def collate_fn(batch):
             torch.full((max_seq_len - seq_len,), IGNORE_ID) 
         ))
 
-    input_embeds = torch.stack([example['input_embeds'] for example in batch])
+    inputs_embeds = torch.stack([example['inputs_embeds'] for example in batch])
     attention_mask = torch.stack([example['attention_mask'] for example in batch])
     labels = torch.stack([example['labels'] for example in batch])
 
     return {
-        'input_embeds': input_embeds,
+        'inputs_embeds': inputs_embeds,
         'attention_mask': attention_mask,
         'labels': labels
     }

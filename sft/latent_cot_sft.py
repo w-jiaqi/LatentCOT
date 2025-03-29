@@ -58,19 +58,19 @@ end_latent_id = tokenizer.convert_tokens_to_ids(end_latent_string)
 start_cot_id = tokenizer.convert_tokens_to_ids(start_cot_string)
 end_cot_id = tokenizer.convert_tokens_to_ids(end_cot_string)
 
-# model = Text2Latent(model_id, tokenizer)
-model = Latent2Text(model_id, tokenizer)
+model = Text2Latent(model_id, tokenizer)
+# model = Latent2Text(model_id, tokenizer)
 
-# text_to_latent_ds = get_text_to_latent_dataset(
-# 	tokenizer, 
-# 	base_model.get_input_embeddings(), 
-# 	start_latent_id, end_latent_id, 
-# 	latent_pool=args.latent_pool, num_train=args.num_train
-# )
+text_to_latent_ds = get_text_to_latent_dataset(
+	tokenizer, 
+	model.embedding, 
+	start_latent_id, end_latent_id, 
+	latent_pool=args.latent_pool, num_train=args.num_train
+)
 
 latent_to_text_ds = get_latent_to_text_dataset(
 	tokenizer=tokenizer,
-	embedding=model.embedding(),
+	embedding=model.embedding,
 	start_latent_id=start_latent_id, end_latent_id=end_latent_id,
 	start_cot_id=start_cot_id, end_cot_id=end_cot_id,
 	latent_pool=args.latent_pool, num_train=args.num_train
@@ -78,19 +78,19 @@ latent_to_text_ds = get_latent_to_text_dataset(
 
 optim = torch.optim.AdamW(model.parameters(), lr=1e-4)
 
-# text_to_latent_dataloader = DataLoader(text_to_latent_ds['train'], batch_size=32)
+text_to_latent_dataloader = DataLoader(text_to_latent_ds['train'], batch_size=32)
 latent_to_text_dataloader = DataLoader(latent_to_text_ds['train'], collate_fn=collate_fn, batch_size=32)
 
-# progress_bar = tqdm(range(len(text_to_latent_dataloader)))
-progress_bar = tqdm(range(len(latent_to_text_dataloader)))
+progress_bar = tqdm(range(len(text_to_latent_dataloader)))
+# progress_bar = tqdm(range(len(latent_to_text_dataloader)))
 
 model = model.to(device)
-# for batch_idx, batch in enumerate(text_to_latent_dataloader):
-for batch_idx, batch in enumerate(latent_to_text_dataloader):
+for batch_idx, batch in enumerate(text_to_latent_dataloader):
+# for batch_idx, batch in enumerate(latent_to_text_dataloader):
 	batch = {k: v.to(device) for k, v in batch.items()}
 
-	# loss = model(input_embeds=batch['input_embeds'], attention_mask=batch['attention_mask'], label_mask=batch['label_mask'])
-	loss = model(input_embeds=batch['input_embeds'], attention_mask=batch['attention_mask'], labels=batch['labels'])
+	loss = model(inputs_embeds=batch['inputs_embeds'], attention_mask=batch['attention_mask'], label_mask=batch['label_mask'])
+	# loss = model(inputs_embeds=batch['inputs_embeds'], attention_mask=batch['attention_mask'], labels=batch['labels'])
 
 	progress_bar.set_description(f"Batch: {batch_idx}, Loss: {loss.item()}")
 

@@ -11,16 +11,14 @@ class Text2Latent(nn.Module):
 		self.tokenizer = tokenizer
 
 		self.model.resize_token_embeddings(len(tokenizer))
+		self.embedding = self.model.get_input_embeddings()
 
 	def parameters(self):
 		return self.model.parameters()
 
-	def embedding(self):
-		return self.model.get_input_embeddings()
-
-	def forward(self, input_embeds, attention_mask, label_mask):
-		src_embeds = input_embeds[:, :-1, :]
-		tgt_embeds = input_embeds[:, 1:, :] 
+	def forward(self, inputs_embeds, attention_mask, label_mask):
+		src_embeds = inputs_embeds[:, :-1, :]
+		tgt_embeds = inputs_embeds[:, 1:, :] 
 
 		src_attention_mask = attention_mask[:, :-1]
 
@@ -66,7 +64,7 @@ class Text2Latent(nn.Module):
 
 		return_embeds = []
 
-		kv_cache = None
+		kv_cache = None 
 
 		for _ in range(max_new_embeds):
 			attention_mask = torch.ones(inputs_embeds.shape[:-1])
@@ -75,7 +73,8 @@ class Text2Latent(nn.Module):
 				inputs_embeds=inputs_embeds, 
 				attention_mask=attention_mask,
 				output_hidden_states=True,
-				past_key_values=kv_cache
+				use_cache=True,
+				past_key_values=None # TODO: FIX KV CACHE check coconut code
 			)
 
 			kv_cache = outputs.past_key_values
@@ -97,7 +96,7 @@ class Text2Latent(nn.Module):
 			), dim=1)
 
 		return torch.cat((
-			bos_embedding,
+			bos_embedding_col,
 			start_latent_embedding_col,
 			*return_embeds,
 			end_latent_embedding_col
