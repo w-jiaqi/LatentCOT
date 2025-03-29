@@ -222,6 +222,8 @@ def collate_fn(batch):
     max_seq_len = max(example['inputs_embeds'].shape[0] for example in batch)
     latent_dim = batch[0]['inputs_embeds'].shape[1]
 
+    labels_col = 'labels' if 'labels' in batch[0] else 'label_mask'
+
     for example in batch:
         seq_len = example['inputs_embeds'].shape[0]
 
@@ -235,19 +237,19 @@ def collate_fn(batch):
             torch.zeros((max_seq_len - seq_len,))
         ))
 
-        example['labels'] = torch.cat((
-            example['labels'],
+        example[labels_col] = torch.cat((
+            example[labels_col],
             torch.full((max_seq_len - seq_len,), IGNORE_ID) 
         ))
 
     inputs_embeds = torch.stack([example['inputs_embeds'] for example in batch])
     attention_mask = torch.stack([example['attention_mask'] for example in batch])
-    labels = torch.stack([example['labels'] for example in batch])
+    labels = torch.stack([example[labels_col] for example in batch])
 
     return {
         'inputs_embeds': inputs_embeds,
         'attention_mask': attention_mask,
-        'labels': labels
+        labels_col: labels
     }
 
 

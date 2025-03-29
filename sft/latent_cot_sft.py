@@ -30,57 +30,94 @@ parser.add_argument(
 parser.add_argument(
 	"-l", "--latent_pool", type=int, required=True
 )
+parser.add_argument(
+	"--batch_num", type=int, default=32
+)
 
 args = parser.parse_args()
 
-checkpoints_path = os.path.join(
+base_checkpoints_path = os.path.join(
     args.checkpoints_dir, 
 	args.dataset, 
-	utils.get_cur_time_string()
 )
+
+text_to_latent_checkpoints_path = os.path.join(
+	base_checkpoints_path,
+	utils.get_cur_time_string(),
+	"text_to_latent",
+)
+
+latent_to_text_checkpoints_path = os.path.join(
+	base_checkpoints_path,
+	utils.get_cur_time_string(),
+	"latent_to_text",
+)
+
+tokenizer_checkpoints_path = os.path.join(
+	base_checkpoints_path,
+	utils.get_cur_time_string(),
+	"tokenizer",
+)
+
+print(f"Saving text2latent @ {text_to_latent_checkpoints_path}")
+print(f"Saving latent2text @ {latent_to_text_checkpoints_path}")
 
 model_id = args.model
 
 tokenizer = LatentTokenizer(model_id)
 
-# model = Text2Latent(model_id, tokenizer)
-model = Latent2Text(model_id, tokenizer)
+text_to_latent_model = Text2Latent(model_id, tokenizer)
+latent_to_text_model = Latent2Text(model_id, tokenizer)
 
 text_to_latent_ds = get_text_to_latent_dataset(
 	tokenizer=tokenizer, 
-	embedding=model.embedding, 
-	latent_pool=args.latent_pool, num_train=args.num_train
+	embedding=text_to_latent_model.embedding, 
+	latent_pool=args.latent_pool, 
+	num_train=args.num_train
 )
 
 latent_to_text_ds = get_latent_to_text_dataset(
-	tokenizer=tokenizer,
-	embedding=model.embedding,
-	latent_pool=args.latent_pool, num_train=args.num_train
+	tokenizer=tokenizer, 
+	embedding=latent_to_text_model.embedding, 
+	latent_pool=args.latent_pool, 
+	num_train=args.num_train
 )
 
-optim = torch.optim.AdamW(model.parameters(), lr=1e-4)
+def train_model(model, dataset, checkpoints_path):
+	optim = torch.optim.AdamW(model.parameters(), lr=1e-4)
+	dataloader = DataLoader(dataset['train'], collate_fn=collate_fn, batch_size=args.batch_num)
 
-text_to_latent_dataloader = DataLoader(text_to_latent_ds['train'], batch_size=32)
-latent_to_text_dataloader = DataLoader(latent_to_text_ds['train'], collate_fn=collate_fn, batch_size=32)
+	model = model.to(device)
 
-# progress_bar = tqdm(range(len(text_to_latent_dataloader)))
-progress_bar = tqdm(range(len(latent_to_text_dataloader)))
+	progress_bar = tqdm(range(len(dataloader)))
 
-model = model.to(device)
-# for batch_idx, batch in enumerate(text_to_latent_dataloader):
-for batch_idx, batch in enumerate(latent_to_text_dataloader):
-	batch = {k: v.to(device) for k, v in batch.items()}
+	for batch_idx, batch in enumerate(dataloader):
+		batch = {k: v.to(device) for k, v in batch.items()}
 
-	# loss = model(inputs_embeds=batch['inputs_embeds'], attention_mask=batch['attention_mask'], label_mask=batch['label_mask'])
-	loss = model(inputs_embeds=batch['inputs_embeds'], attention_mask=batch['attention_mask'], labels=batch['labels'])
+		loss = model(**batch)
 
-	progress_bar.set_description(f"Batch: {batch_idx}, Loss: {loss.item()}")
+		progress_bar.set_description(f"Batch: {batch_idx}, Loss: {loss.item()}")
 
-	optim.zero_grad()
-	loss.backward()
-	optim.step()
+		optim.zero_grad()
+		loss.backward()
+		optim.step()
 
-	progress_bar.update(1)
+		progress_bar.update(1)
 
-model.save_pretrained(checkpoints_path)
-tokenizer.save_pretrained(checkpoints_path)
+	model.save_pretrained(checkpoints_path)
+
+
+print("Training text2latent")
+train_model(
+	text_to_latent_model,
+	text_to_latent_ds,
+	text_to_latent_checkpoints_path
+)
+print("Training latent2text")
+train_model(
+	latent_to_text_model,
+	latent_to_text_ds,
+	latent_to_text_checkpoints_path
+)
+
+tokenizer.save_pretrained(tokenizer_checkpoints_path)
