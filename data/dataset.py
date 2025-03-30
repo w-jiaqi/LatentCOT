@@ -44,10 +44,10 @@ def compress_embeddings(embeddings: torch.nn.Module, latent_pool: torch.tensor) 
 #     return ds
 
 # labels, input_ids, attention_mask
-def get_cot_sft_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: PreTrainedTokenizerFast, num_train: Optional[int] = None, num_proc: Optional[int] = None) -> Union[DatasetDict, Dataset]:
-    def preprocess_fn(examples):
-        questions = [example.split("||")[0] + '||' for example in examples['text']] # TODO change to \n and then use same base dataset of QRA
-        answers = [example.split("||")[1] for example in examples['text']]
+def get_cot_sft_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: PreTrainedTokenizerFast) -> Union[DatasetDict, Dataset]:
+    def preprocess_fn(batch):
+        questions = [question + '\n' for question in batch['question']]
+        answers = [reasoning + ' #### ' + answer for reasoning, answer in zip(batch['reasoning'], batch['answer'])]
 
         questions_tokenized = tokenizer(questions, add_special_tokens=True) # add begin of seq token
         answers_tokenized = tokenizer(answers, add_special_tokens=False)
@@ -69,12 +69,9 @@ def get_cot_sft_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: PreTrai
 
         return {'labels': labels, 'input_ids': input_ids, 'attention_mask': attention_mask}
 
-    if num_train != None:
-        ds["train"] = ds["train"].select(range(num_train))
-
-    ds = ds.map(preprocess_fn, batched=True, num_proc=num_proc, remove_columns=['text'])
-
-    return ds
+    dataset = dataset.map(preprocess_fn, batched=True, remove_columns=dataset['train'].column_names)
+    
+    return dataset
 
 # note: i dont think the way we preprocess here will work for gsm8k because 
 # we can't batch process the latents (they will all be different lengths)

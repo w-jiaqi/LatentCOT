@@ -20,7 +20,6 @@ def get_4x4_dataset(num_train: Optional[int] = None, num_proc: Optional[int] = N
             "question": question,
             "reasoning": reasoning,
             "answer": answer,
-            "full_answer": full_answer
         }
 
     ds = load_dataset(

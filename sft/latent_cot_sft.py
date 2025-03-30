@@ -37,6 +37,9 @@ parser.add_argument(
 parser.add_argument(
 	"--num_proc", type=int, default=None
 )
+parser.add_argument(
+	"--checkpoints_name", type=str, default=utils.get_cur_time_string()
+)
 
 args = parser.parse_args()
 
@@ -45,23 +48,21 @@ base_checkpoints_path = os.path.join(
 	args.dataset, 
 )
 
-cur_time_string = utils.get_cur_time_string()
-
 text_to_latent_checkpoints_path = os.path.join(
 	base_checkpoints_path,
-	cur_time_string,
+	args.checkpoints_name,
 	"text_to_latent",
 )
 
 latent_to_text_checkpoints_path = os.path.join(
 	base_checkpoints_path,
-	cur_time_string,
+	args.checkpoints_name,
 	"latent_to_text",
 )
 
 tokenizer_checkpoints_path = os.path.join(
 	base_checkpoints_path,
-	cur_time_string,
+	args.checkpoints_name,
 	"tokenizer",
 )
 

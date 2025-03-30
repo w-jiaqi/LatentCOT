@@ -26,12 +26,15 @@ parser.add_argument(
     "-d", "--dataset", choices=["gsm8k", "4x4"], type=str, required=True
 )
 parser.add_argument(
-    "-m", "--model", type=str, default="meta-llama/Llama-3.2-1B-Instruct"
+    "-m", "--model", type=str, default="meta-llama/Llama-3.2-1B"
 )
 parser.add_argument("--checkpoints_dir", type=str, default="checkpoints/cot-sft")
-parser.add_argument("--epochs", type=int, default=3)
+parser.add_argument("--epochs", type=int, required=True)
 parser.add_argument(
     "--num_train", type=int, default=None, help="Number of training examples to use"
+)
+parser.add_argument(
+    "--checkpoints_name", type=str, default=utils.get_cur_time_string()
 )
 
 args = parser.parse_args()
@@ -39,7 +42,7 @@ args = parser.parse_args()
 checkpoints_path = os.path.join(
     args.checkpoints_dir, 
     args.dataset, 
-    utils.get_cur_time_string()
+    args.checkpoints_name,
 )
 
 model_name = args.model
@@ -48,22 +51,20 @@ model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype="auto")
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 # load the dataset
-ds = None
+base_ds = None
 
 print(vars(args))
 
 if args.dataset == "gsm8k":
-    ds = dataset.get_gsm8k_dataset(tokenizer)
+    base_ds = dataset.get_gsm8k_dataset(tokenizer)
 elif args.dataset == "4x4":
-    ds = multiplication_dataset.get_4x4_multiplication_dataset(tokenizer, num_train=args.num_train)
+    base_ds = multiplication_dataset.get_4x4_dataset(num_train=args.num_train)
+
+ds = dataset.get_cot_sft_dataset(base_ds, tokenizer)
 
 print(
     f"Dataset loaded: {len(ds['train'])} training examples, {len(ds['test'])} test examples"
 )
-
-example_train = ds["train"][0]
-
-print(example_train)
 
 training_args = TrainingArguments(
     output_dir=checkpoints_path,
