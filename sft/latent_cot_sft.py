@@ -24,12 +24,15 @@ parser.add_argument(
 parser.add_argument(
     "-m", "--model", type=str, default="meta-llama/Llama-3.2-1B"
 )
+parser.add_argument(
+    "-t", "--tokenizer", type=str, default="meta-llama/Llama-3.2-1B"
+)
 parser.add_argument("--checkpoints_dir", type=str, default="checkpoints/latent-cot-sft")
 parser.add_argument(
     "--num_train", type=int, default=None, help="Number of training examples to use"
 )
 parser.add_argument(
-	"-l", "--latent_pool", type=int, required=True
+	"-l", "--latent_pool", type=int, required=True, help="Number of embeddings to mean pool for sft"
 )
 parser.add_argument(
 	"--batch_num", type=int, default=32
@@ -38,10 +41,19 @@ parser.add_argument(
 	"--num_proc", type=int, default=None
 )
 parser.add_argument(
-	"--checkpoints_name", type=str, default=utils.get_cur_time_string()
+	"--checkpoints_name", type=str, default=utils.get_cur_time_string(), help="Name of checkpoints folder underneath checkpoints_dir"
+)
+parser.add_argument(
+	"--no_cache", action='store_true', help="Disable caching for datasets (helps with disk space)"
 )
 
 args = parser.parse_args()
+
+if args.no_cache:
+	print("Disabling dataset caching")
+
+	from datasets import disable_caching
+	disable_caching()
 
 base_checkpoints_path = os.path.join(
     args.checkpoints_dir, 
@@ -71,19 +83,19 @@ print(f"Saving latent2text @ {latent_to_text_checkpoints_path}")
 
 model_id = args.model
 
-tokenizer = LatentTokenizer(model_id)
+tokenizer = LatentTokenizer(args.tokenizer)
 
-text_to_latent_model = Text2Latent(model_id, tokenizer)
+# text_to_latent_model = Text2Latent(model_id, tokenizer)
 latent_to_text_model = Latent2Text(model_id, tokenizer)
 
 base_ds = get_4x4_dataset(num_train=args.num_train, num_proc=args.num_proc) if args.dataset == "4x4" else None
 
-text_to_latent_ds = get_text_to_latent_dataset(
-	dataset=base_ds,
-	tokenizer=tokenizer, 
-	embedding=text_to_latent_model.embedding, 
-	latent_pool=args.latent_pool, 
-)
+# text_to_latent_ds = get_text_to_latent_dataset(
+# 	dataset=base_ds,
+# 	tokenizer=tokenizer, 
+# 	embedding=text_to_latent_model.embedding, 
+# 	latent_pool=args.latent_pool, 
+# )
 
 latent_to_text_ds = get_latent_to_text_dataset(
 	dataset=base_ds,
@@ -93,7 +105,7 @@ latent_to_text_ds = get_latent_to_text_dataset(
 )
 
 def train_model(model, dataset, checkpoints_path):
-	optim = torch.optim.AdamW(model.parameters(), lr=1e-4)
+	optim = torch.optim.AdamW(model.parameters(), lr=1e-5)
 	dataloader = DataLoader(dataset['train'], collate_fn=collate_fn, batch_size=args.batch_num)
 
 	model = model.to(device)
@@ -115,13 +127,12 @@ def train_model(model, dataset, checkpoints_path):
 
 	model.save_pretrained(checkpoints_path)
 
-
-print("Training text2latent")
-train_model(
-	text_to_latent_model,
-	text_to_latent_ds,
-	text_to_latent_checkpoints_path
-)
+# print("Training text2latent")
+# train_model(
+# 	text_to_latent_model,
+# 	text_to_latent_ds,
+# 	text_to_latent_checkpoints_path
+# )
 print("Training latent2text")
 train_model(
 	latent_to_text_model,

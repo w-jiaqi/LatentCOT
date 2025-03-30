@@ -9,7 +9,7 @@ from typing import Union, Optional
 
 IGNORE_ID = -100
 
-def compress_embeddings(embeddings: torch.nn.Module, latent_pool: int) -> torch.tensor:
+def compress_embeddings(embeddings: torch.Tensor, latent_pool: int) -> torch.Tensor:
     seq_length, latent_dim = embeddings.shape
     latent_seq_length = (seq_length // latent_pool) + 1
 
@@ -136,7 +136,7 @@ def get_latent_to_text_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: 
 
     def preprocess_fn(batch):
         reasoning = batch['reasoning'][0] # batch size of 1
-        answer = batch['answer'][0]
+        answer = ' #### ' + batch['answer'][0]
         
         reasoning_ids = tokenizer.encode(reasoning, return_tensors="pt", add_special_tokens=False)[0] # remove batch dimension
         answer_ids = tokenizer.encode(answer, return_tensors="pt", add_special_tokens=False)[0]
