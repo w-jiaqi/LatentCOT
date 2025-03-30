@@ -9,7 +9,7 @@ from typing import Union, Optional
 
 IGNORE_ID = -100
 
-def compress_embeddings(embeddings: torch.nn.Module, latent_pool: torch.tensor) -> torch.tensor:
+def compress_embeddings(embeddings: torch.nn.Module, latent_pool: int) -> torch.tensor:
     seq_length, latent_dim = embeddings.shape
     latent_seq_length = (seq_length // latent_pool) + 1
 
@@ -76,7 +76,7 @@ def get_cot_sft_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: PreTrai
 # note: i dont think the way we preprocess here will work for gsm8k because 
 # we can't batch process the latents (they will all be different lengths)
 def get_text_to_latent_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: LatentTokenizer, embedding: torch.nn.Module, 
-                               num_proc: Optional[int] = None, latent_pool: int = 10) -> Union[DatasetDict, Dataset]:
+                               latent_pool: int, num_proc: Optional[int] = None) -> Union[DatasetDict, Dataset]:
     start_latent_embedding = embedding(torch.tensor(tokenizer.start_latent_id))
     end_latent_embedding = embedding(torch.tensor(tokenizer.end_latent_id))
 
@@ -124,7 +124,7 @@ def get_text_to_latent_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: 
     return dataset
 
 def get_latent_to_text_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: LatentTokenizer, embedding: torch.nn.Module,
-                               num_proc: Optional[int] = None, latent_pool: int = 10) -> Union[DatasetDict, Dataset]:
+                               latent_pool: int, num_proc: Optional[int] = None) -> Union[DatasetDict, Dataset]:
     start_latent_embedding = embedding(torch.tensor(tokenizer.start_latent_id))
     end_latent_embedding = embedding(torch.tensor(tokenizer.end_latent_id))
 

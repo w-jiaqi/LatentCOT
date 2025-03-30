@@ -7,6 +7,9 @@ from typing import Union, Optional
 TRAIN_4x4_PATH = "data/multiplication/4x4/train.txt"
 TEST_4x4_PATH = "data/multiplication/4x4/valid.txt"
 
+TRAIN_5x5_PATH = "data/multiplication/5x5/train.txt"
+TEST_5x5_PATH = "data/multiplication/5x5/valid.txt"
+
 def get_4x4_dataset(num_train: Optional[int] = None, num_proc: Optional[int] = None) -> Union[DatasetDict, Dataset]:
     def preprocess_fn(example):
         text = example['text']
@@ -27,6 +30,36 @@ def get_4x4_dataset(num_train: Optional[int] = None, num_proc: Optional[int] = N
         data_files={
             "train": TRAIN_4x4_PATH,
             "test": TEST_4x4_PATH,
+        },
+    )
+
+    if num_train != None:
+        ds["train"] = ds["train"].select(range(num_train))
+
+    ds = ds.map(preprocess_fn, batched=False, num_proc=num_proc, remove_columns=['text'])
+    
+    return ds
+
+def get_5x5_dataset(num_train: Optional[int] = None, num_proc: Optional[int] = None) -> Union[DatasetDict, Dataset]:
+    def preprocess_fn(example):
+        text = example['text']
+
+        question = text.split("||")[0]
+        full_answer = text.split("||")[1]
+        reasoning = full_answer.split("####")[0].strip()
+        answer = full_answer.split("####")[1].strip()
+
+        return {
+            "question": question,
+            "reasoning": reasoning,
+            "answer": answer,
+        }
+
+    ds = load_dataset(
+        "text",
+        data_files={
+            "train": TRAIN_5x5_PATH,
+            "test": TEST_5x5_PATH,
         },
     )
 

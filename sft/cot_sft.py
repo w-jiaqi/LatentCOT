@@ -23,7 +23,7 @@ import utils.utils as utils
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "-d", "--dataset", choices=["gsm8k", "4x4"], type=str, required=True
+    "-d", "--dataset", choices=["gsm8k", "4x4", "5x5"], type=str, required=True
 )
 parser.add_argument(
     "-m", "--model", type=str, default="meta-llama/Llama-3.2-1B"
@@ -59,6 +59,8 @@ if args.dataset == "gsm8k":
     base_ds = dataset.get_gsm8k_dataset(tokenizer)
 elif args.dataset == "4x4":
     base_ds = multiplication_dataset.get_4x4_dataset(num_train=args.num_train)
+elif args.dataset == "5x5":
+    base_ds = multiplication_dataset.get_5x5_dataset(num_train=args.num_train)
 
 ds = dataset.get_cot_sft_dataset(base_ds, tokenizer)
 
