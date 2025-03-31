@@ -23,6 +23,9 @@ parser.add_argument(
     "-d", "--dataset", choices=["gsm8k", "4x4"], type=str, required=True
 )
 parser.add_argument(
+	"-e", "--epochs", type=int, default=1
+)
+parser.add_argument(
     "-m", "--model", type=str, default="meta-llama/Llama-3.2-1B"
 )
 parser.add_argument(
@@ -54,6 +57,7 @@ parser.add_argument(
 parser.add_argument(
 	"--skip_l2t", action="store_true", help="Skip latent to text training"
 )
+
 
 args = parser.parse_args()
 
@@ -112,20 +116,25 @@ def train_model(model, dataset, checkpoints_path):
 
 	model = model.to(device)
 
-	progress_bar = tqdm(range(len(dataloader)))
 
-	for batch_idx, batch in enumerate(dataloader):
-		batch = {k: v.to(device) for k, v in batch.items()}
+	for epoch in range(args.epochs):
+		progress_bar = tqdm(range(len(dataloader)))
 
-		loss = model(**batch)
+		for batch_idx, batch in enumerate(dataloader):
+			batch = {k: v.to(device) for k, v in batch.items()}
 
-		progress_bar.set_description(f"Batch: {batch_idx}, Loss: {loss.item()}")
+			loss = model(**batch)
 
-		optim.zero_grad()
-		loss.backward()
-		optim.step()
+			progress_bar.set_description(f"Batch: {batch_idx}, Loss: {loss.item()}")
 
-		progress_bar.update(1)
+			optim.zero_grad()
+			loss.backward()
+			optim.step()
+
+			progress_bar.update(1)
+
+		print(f"Finishid Epoch ({epoch})")
+		
 
 	model.save_pretrained(checkpoints_path)
 
