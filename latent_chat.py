@@ -5,6 +5,7 @@ test file for chatting with the latent model
 '''
 import sys, os
 
+from data.dataset import compress_embeddings
 from utils import utils
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
@@ -55,12 +56,12 @@ while True:
 
 	# print(utils.angle_between(t2l_embedding, l2t_embedding))
 
-	print(latent_to_text.generate(
-		text_to_latent.generate(
-			prompt, 
-			max_new_embeds=100), 
-			output_cot=True
-    ))
+	# print(latent_to_text.generate(
+	# 	text_to_latent.generate(
+	# 		prompt, 
+	# 		max_new_embeds=100), 
+	# 		output_cot=True
+    # ))
 
 	# print(latent_to_text.generate(
 	# 	text_to_latent.generate(
@@ -72,13 +73,15 @@ while True:
 	# print(text_to_latent.generate(prompt, max_new_embeds=100))
 	# print(text_to_latent.generate(prompt, max_new_embeds=30).shape)
 
-	# prompt_embedding = text_to_latent.embedding(tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False))
-	# prompt_embedding = torch.cat((
-	# 	text_to_latent.embedding(tokenizer.encode("<|start-latent|>", return_tensors="pt", add_special_tokens=True)),
-	# 	prompt_embedding,
-	# 	text_to_latent.embedding(tokenizer.encode("<|end-latent|>", return_tensors="pt", add_special_tokens=False)),
-	# ), dim=1)
+	prompt_embedding = text_to_latent.embedding(tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False))
+	prompt_embedding = compress_embeddings(prompt_embedding[0], args.latent_pool)[1].unsqueeze(0)
 
-	# print(latent_to_text.generate(prompt_embedding, output_cot=True))
-	# print(latent_to_text.generate(prompt_embedding, output_cot=False))
+	prompt_embedding = torch.cat((
+		text_to_latent.embedding(tokenizer.encode("<|start-latent|>", return_tensors="pt", add_special_tokens=True)),
+		prompt_embedding,
+		text_to_latent.embedding(tokenizer.encode("<|end-latent|>", return_tensors="pt", add_special_tokens=False)),
+	), dim=1)
+
+	print(latent_to_text.generate(prompt_embedding, output_cot=True))
+	print(latent_to_text.generate(prompt_embedding, output_cot=False))
 	
