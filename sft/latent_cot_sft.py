@@ -85,24 +85,7 @@ model_id = args.model
 
 tokenizer = LatentTokenizer(args.tokenizer)
 
-# text_to_latent_model = Text2Latent(model_id, tokenizer)
-latent_to_text_model = Latent2Text(model_id, tokenizer)
-
 base_ds = get_4x4_dataset(num_train=args.num_train, num_proc=args.num_proc) if args.dataset == "4x4" else None
-
-# text_to_latent_ds = get_text_to_latent_dataset(
-# 	dataset=base_ds,
-# 	tokenizer=tokenizer, 
-# 	embedding=text_to_latent_model.embedding, 
-# 	latent_pool=args.latent_pool, 
-# )
-
-latent_to_text_ds = get_latent_to_text_dataset(
-	dataset=base_ds,
-	tokenizer=tokenizer, 
-	embedding=latent_to_text_model.embedding, 
-	latent_pool=args.latent_pool, 
-)
 
 def train_model(model, dataset, checkpoints_path):
 	optim = torch.optim.AdamW(model.parameters(), lr=1e-5)
@@ -127,17 +110,43 @@ def train_model(model, dataset, checkpoints_path):
 
 	model.save_pretrained(checkpoints_path)
 
-# print("Training text2latent")
-# train_model(
-# 	text_to_latent_model,
-# 	text_to_latent_ds,
-# 	text_to_latent_checkpoints_path
-# )
-print("Training latent2text")
-train_model(
-	latent_to_text_model,
-	latent_to_text_ds,
-	latent_to_text_checkpoints_path
-)
+def train_text_to_latent():
+	model = Text2Latent(model_id, tokenizer)
+
+	ds = get_text_to_latent_dataset(
+		dataset=base_ds,
+		tokenizer=tokenizer, 
+		embedding=model.embedding, 
+		latent_pool=args.latent_pool, 
+	)
+
+	print("Training text2latent")
+
+	train_model(
+		model,
+		ds,
+		text_to_latent_checkpoints_path
+	)
+
+def train_latent_to_text():
+	model = Latent2Text(model_id, tokenizer)
+
+	ds = get_latent_to_text_dataset(
+		dataset=base_ds,
+		tokenizer=tokenizer, 
+		embedding=model.embedding, 
+		latent_pool=args.latent_pool, 
+	)
+
+	print("Training latent2text")
+
+	train_model(
+		model,
+		ds,
+		latent_to_text_checkpoints_path
+	)
+
+train_text_to_latent()
+train_latent_to_text()
 
 tokenizer.save_pretrained(tokenizer_checkpoints_path)
