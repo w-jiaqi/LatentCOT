@@ -11,6 +11,7 @@ from sft.models.latent_2_text import Latent2Text
 from sft.models.latent_tokenizer import LatentTokenizer
 from tqdm.auto import tqdm
 from data.multiplication_dataset import get_4x4_dataset
+from data.gsm8k_dataset import get_gsm8k_dataset
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if device == 'cpu':
