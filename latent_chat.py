@@ -56,19 +56,19 @@ while True:
 
 	# print(utils.angle_between(t2l_embedding, l2t_embedding))
 
-	# print(latent_to_text.generate(
-	# 	text_to_latent.generate(
-	# 		prompt, 
-	# 		max_new_embeds=100), 
-	# 		output_cot=True
-    # ))
+	print(latent_to_text.generate(
+		text_to_latent.generate(
+			prompt, 
+			max_new_embeds=51), 
+			output_cot=True
+    ))
 
-	# print(latent_to_text.generate(
-	# 	text_to_latent.generate(
-	# 		prompt, 
-	# 		max_new_embeds=10), 
-	# 		output_cot=False
-    # ))
+	print(latent_to_text.generate(
+		text_to_latent.generate(
+			prompt, 
+			max_new_embeds=51), 
+			output_cot=False
+    ))
 
 	# print(text_to_latent.generate(prompt, max_new_embeds=100))
 	# print(text_to_latent.generate(prompt, max_new_embeds=30).shape)
