@@ -74,7 +74,9 @@ while True:
 	# print(text_to_latent.generate(prompt, max_new_embeds=30).shape)
 
 	prompt_embedding = text_to_latent.embedding(tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False))
+	print(prompt_embedding.shape)
 	prompt_embedding = compress_embeddings(prompt_embedding[0], args.latent_pool)[1].unsqueeze(0)
+	print(prompt_embedding.shape)
 
 	prompt_embedding = torch.cat((
 		text_to_latent.embedding(tokenizer.encode("<|start-latent|>", return_tensors="pt", add_special_tokens=True)),
