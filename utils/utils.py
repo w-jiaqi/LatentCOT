@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 import re
-
+import torch
 
 def get_cur_time_string():
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -22,3 +22,10 @@ def string_to_filename(s):
     s = re.sub(r"[\x00-\x1f\x7f]", "", s)
 
     return s
+
+
+def angle_between(v1, v2):
+    v1_u = v1 / torch.linalg.norm(v1)
+    v2_u = v2 / torch.linalg.norm(v2)
+
+    return torch.rad2deg(torch.arccos(torch.clip(torch.dot(v1_u, v2_u), -1.0, 1.0)))

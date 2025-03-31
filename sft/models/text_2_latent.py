@@ -10,6 +10,7 @@ class Text2Latent(nn.Module):
 
 		self.model = AutoModelForCausalLM.from_pretrained(model_id)
 		self.tokenizer = tokenizer
+		# self.model.tie_weights()
 
 		self.model.resize_token_embeddings(len(tokenizer))
 		self.embedding = self.model.get_input_embeddings()
@@ -44,7 +45,7 @@ class Text2Latent(nn.Module):
 
 		return loss
 
-	def generate(self, prompt: str, max_new_embeds: int) -> torch.Tensor:
+	def generate(self, prompt: str, max_new_embeds: int, probe_latents: bool = False) -> torch.Tensor:
 		prompt_ids = self.tokenizer.encode(prompt, return_tensors="pt")
 		prompt_embeddings = self.embedding(prompt_ids)
 
@@ -59,8 +60,8 @@ class Text2Latent(nn.Module):
 
 		inputs_embeds = torch.cat((
 			bos_embedding_col,
-			start_latent_embedding_col,
 			prompt_embeddings,
+			start_latent_embedding_col,
 		), dim=1) # cat along seq dimension
 
 		return_embeds = []
@@ -80,13 +81,16 @@ class Text2Latent(nn.Module):
 
 			kv_cache = outputs.past_key_values
 
-			_, greedy_index = torch.max(outputs.logits[0, -1], dim=0) # ignore batch dim, get last prediction
+			_, greedy_index = torch.max(outputs.logits[0][-1], dim=0) # ignore batch dim, get last prediction
+
+			if probe_latents:
+				print(self.tokenizer.decode(greedy_index))
 
 			if greedy_index == self.tokenizer.end_latent_id:
 				break
 
 			last_hidden_state = outputs.hidden_states[-1] # hidden states of last layer
-			next_prediction = last_hidden_state[0, -1].reshape(1, 1, -1) # ignore batch dim, get hidden state from last token
+			next_prediction = last_hidden_state[0][-1].reshape(1, 1, -1) # ignore batch dim, get hidden state from last token
 																	     # then reshape back into batch_dim * seq_len * latent_dim
 															
 			return_embeds.append(next_prediction)

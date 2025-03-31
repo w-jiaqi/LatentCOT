@@ -4,6 +4,8 @@ test file for chatting with the latent model
 
 '''
 import sys, os
+
+from utils import utils
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
 from sft.models.latent_2_text import Latent2Text
@@ -44,29 +46,39 @@ latent_to_text = Latent2Text(model_id=args.latent_to_text, tokenizer=tokenizer)
 while True:
 	prompt = input()
 
+	prompt_ids = tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False)[0]
+
+	# print(prompt_ids)
+
+	# t2l_embedding = text_to_latent.embedding(prompt_ids)[-1]
+	# l2t_embedding = latent_to_text.embedding(prompt_ids)[-1]
+
+	# print(utils.angle_between(t2l_embedding, l2t_embedding))
+
 	print(latent_to_text.generate(
 		text_to_latent.generate(
 			prompt, 
-			max_new_embeds=10), 
+			max_new_embeds=100), 
 			output_cot=True
     ))
 
-	print(latent_to_text.generate(
-		text_to_latent.generate(
-			prompt, 
-			max_new_embeds=10), 
-			output_cot=False
-    ))
+	# print(latent_to_text.generate(
+	# 	text_to_latent.generate(
+	# 		prompt, 
+	# 		max_new_embeds=10), 
+	# 		output_cot=False
+    # ))
 
-	print(text_to_latent.generate(prompt, max_new_embeds=10))
-	print(text_to_latent.generate(prompt, max_new_embeds=10).shape)
+	# print(text_to_latent.generate(prompt, max_new_embeds=100))
+	# print(text_to_latent.generate(prompt, max_new_embeds=30).shape)
 
-	prompt_embedding = latent_to_text.embedding(tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False))
-	prompt_embedding = torch.cat((
-		latent_to_text.embedding(tokenizer.encode("<|start-latent|>", return_tensors="pt", add_special_tokens=True)),
-		prompt_embedding,
-		latent_to_text.embedding(tokenizer.encode("<|end-latent|>", return_tensors="pt", add_special_tokens=False)),
-	), dim=1)
+	# prompt_embedding = text_to_latent.embedding(tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False))
+	# prompt_embedding = torch.cat((
+	# 	text_to_latent.embedding(tokenizer.encode("<|start-latent|>", return_tensors="pt", add_special_tokens=True)),
+	# 	prompt_embedding,
+	# 	text_to_latent.embedding(tokenizer.encode("<|end-latent|>", return_tensors="pt", add_special_tokens=False)),
+	# ), dim=1)
 
-	print(latent_to_text.generate(prompt_embedding, output_cot=True))
+	# print(latent_to_text.generate(prompt_embedding, output_cot=True))
+	# print(latent_to_text.generate(prompt_embedding, output_cot=False))
 	
