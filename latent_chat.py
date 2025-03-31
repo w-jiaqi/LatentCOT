@@ -79,7 +79,7 @@ while True:
 	print(prompt_embedding.shape)
 
 	prompt_embedding = torch.cat((
-		text_to_latent.embedding(tokenizer.encode("<|start-latent|>", return_tensors="pt", add_special_tokens=True)),
+		text_to_latent.embedding(tokenizer.encode("<|start-latent|>", return_tensors="pt", add_special_tokens=True)), # adds bos
 		prompt_embedding,
 		text_to_latent.embedding(tokenizer.encode("<|end-latent|>", return_tensors="pt", add_special_tokens=False)),
 	), dim=1)

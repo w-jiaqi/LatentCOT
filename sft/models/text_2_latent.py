@@ -46,7 +46,7 @@ class Text2Latent(nn.Module):
 		return loss
 
 	def generate(self, prompt: str, max_new_embeds: int, probe_latents: bool = False) -> torch.Tensor:
-		prompt_ids = self.tokenizer.encode(prompt, return_tensors="pt")
+		prompt_ids = self.tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False)
 		prompt_embeddings = self.embedding(prompt_ids)
 
 		bos_embedding = self.embedding(torch.tensor(self.tokenizer.bos_token_id))
