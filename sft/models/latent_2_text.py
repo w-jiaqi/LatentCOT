@@ -22,17 +22,11 @@ class Latent2Text(nn.Module):
 
 		outputs = self.model(
 			inputs_embeds = src_inputs_embeds,
-			attention_mask = src_attention_mask
-		) # TODO: try just setting labels = labels and returning outputs.loss
+			attention_mask = src_attention_mask,
+			labels = labels[:, 1:]
+		)
 
-		logits = outputs.logits
-		pred_logits = logits.view(-1, logits.shape[-1])
-		tgt_labels = labels[:, 1:].contiguous().view(-1)
-
-		loss_fn = nn.CrossEntropyLoss()
-		loss = loss_fn(pred_logits, tgt_labels)
-
-		return loss
+		return outputs.loss
 
 	# inputs_embeds should be batch_dim * seq_len * latent_dim
 	def generate(self, inputs_embeds: torch.Tensor, output_cot=False, max_new_tokens: int=128) -> str:

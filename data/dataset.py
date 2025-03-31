@@ -6,12 +6,13 @@ import torch
 from sft.models.latent_tokenizer import LatentTokenizer
 from transformers import PreTrainedTokenizerFast
 from typing import Union, Optional
+import math
 
 IGNORE_ID = -100
 
 def compress_embeddings(embeddings: torch.Tensor, latent_pool: int) -> torch.Tensor:
     seq_length, latent_dim = embeddings.shape
-    latent_seq_length = (seq_length // latent_pool) + 1
+    latent_seq_length = math.ceil(seq_length / latent_pool)
 
     latent_embeddings = torch.zeros(latent_seq_length, latent_dim)
     

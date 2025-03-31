@@ -46,6 +46,13 @@ parser.add_argument(
 parser.add_argument(
 	"--no_cache", action='store_true', help="Disable caching for datasets (helps with disk space)"
 )
+parser.add_argument(
+	"--skip_t2l", action="store_true", help="Skip text to latent training"
+)
+
+parser.add_argument(
+	"--skip_l2t", action="store_true", help="Skip latent to text training"
+)
 
 args = parser.parse_args()
 
@@ -146,7 +153,10 @@ def train_latent_to_text():
 		latent_to_text_checkpoints_path
 	)
 
-train_text_to_latent()
-train_latent_to_text()
+if not args.skip_t2l:
+	train_text_to_latent()
+
+if not args.skip_l2t:
+	train_latent_to_text()
 
 tokenizer.save_pretrained(tokenizer_checkpoints_path)
