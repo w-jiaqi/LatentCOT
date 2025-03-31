@@ -93,7 +93,18 @@ model_id = args.model
 
 tokenizer = LatentTokenizer(args.tokenizer)
 
-base_ds = get_4x4_dataset(num_train=args.num_train, num_proc=args.num_proc) if args.dataset == "4x4" else None
+base_ds = None
+
+if args.dataset == "4x4":
+    base_ds = get_4x4_dataset(num_train=args.num_train, num_proc=args.num_proc)
+elif args.dataset == "gsm8k":
+    base_ds = get_gsm8k_dataset(num_train=args.num_train, num_proc=args.num_proc)
+else:
+    raise ValueError(f"Unrecognized dataset: {args.dataset}")
+
+if base_ds is None:
+	print("No dataset found, exiting")
+	sys.exit()
 
 def train_model(model, dataset, checkpoints_path):
 	optim = torch.optim.AdamW(model.parameters(), lr=1e-5)
