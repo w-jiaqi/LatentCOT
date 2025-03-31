@@ -57,4 +57,16 @@ while True:
 			max_new_embeds=10), 
 			output_cot=False
     ))
+
+	print(text_to_latent.generate(prompt, max_new_embeds=10))
+	print(text_to_latent.generate(prompt, max_new_embeds=10).shape)
+
+	prompt_embedding = latent_to_text.embedding(tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False))
+	prompt_embedding = torch.cat((
+		latent_to_text.embedding(tokenizer.encode("<|start-latent|>", return_tensors="pt", add_special_tokens=True)),
+		prompt_embedding,
+		latent_to_text.embedding(tokenizer.encode("<|end-latent|>", return_tensors="pt", add_special_tokens=False)),
+	), dim=1)
+
+	print(latent_to_text.generate(prompt_embedding, output_cot=True))
 	

@@ -178,7 +178,7 @@ def get_latent_to_text_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: 
         ))
 
         ans_labels = torch.cat((
-            torch.full(((3+latent_reasoning_length,)), IGNORE_ID), # ignore bos, start_latent, end_latent
+            torch.full(((3 + latent_reasoning_length,)), IGNORE_ID), # ignore bos, start_latent, end_latent
             answer_ids,
             torch.tensor(tokenizer.eos_token_id).unsqueeze(0)
         ))

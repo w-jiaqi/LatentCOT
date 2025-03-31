@@ -17,13 +17,10 @@ class Latent2Text(nn.Module):
 		return self.model.parameters()
 	
 	def forward(self, inputs_embeds: torch.Tensor, attention_mask: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
-		src_inputs_embeds = inputs_embeds[:, :-1, :]
-		src_attention_mask = attention_mask[:, :-1]
-
 		outputs = self.model(
-			inputs_embeds = src_inputs_embeds,
-			attention_mask = src_attention_mask,
-			labels = labels[:, 1:]
+			inputs_embeds = inputs_embeds,
+			attention_mask = attention_mask,
+			labels = labels
 		)
 
 		return outputs.loss
