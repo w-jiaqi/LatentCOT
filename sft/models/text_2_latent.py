@@ -41,7 +41,10 @@ class Text2Latent(nn.Module):
 		masked_preds = pred_embeds[loss_mask.bool()]
 		masked_targets = tgt_embeds[loss_mask.bool()]
 
-		loss = F.mse_loss(masked_preds, masked_targets)
+		loss_func = torch.nn.MSELoss(reduction='none')
+		loss = loss_func(masked_preds, masked_targets)
+		loss = torch.sum(loss, dim=1)
+		loss = torch.mean(loss)
 
 		return loss
 

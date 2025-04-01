@@ -85,7 +85,7 @@ def get_text_to_latent_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: 
         question = example['question']
         reasoning = example['reasoning']
 
-        question_ids = tokenizer.encode(question, return_tensors="pt", add_special_tokens=True)[0] # remove batch dimension
+        question_ids = tokenizer.encode(question, return_tensors="pt", add_special_tokens=True)[0] # remove batch dimension, add bos token
         reasoning_ids = tokenizer.encode(reasoning, return_tensors="pt", add_special_tokens=False)[0] 
 
         question_embeddings = embedding(question_ids)
@@ -97,7 +97,7 @@ def get_text_to_latent_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: 
         end_latent_column = end_latent_embedding.unsqueeze(0)
 
         inputs_embeds = torch.cat((
-            question_embeddings, 
+            question_embeddings, # bos already included
             start_latent_column, 
             latent_reasoning_embeddings, 
             end_latent_column

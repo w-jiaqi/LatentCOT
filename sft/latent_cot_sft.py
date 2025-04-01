@@ -58,6 +58,14 @@ parser.add_argument(
 	"--skip_l2t", action="store_true", help="Skip latent to text training"
 )
 
+parser.add_argument(
+	"--t2l_lr", type=float, default=1e-2, help="Learning rate for text to latents"
+)
+
+parser.add_argument(
+	"--l2t_lr", type=float, default=1e-5, help="Learning rate for latents to text"
+)
+
 
 args = parser.parse_args()
 
@@ -110,8 +118,8 @@ if base_ds is None:
 	print("No dataset found, exiting")
 	sys.exit()
 
-def train_model(model, dataset, checkpoints_path):
-	optim = torch.optim.AdamW(model.parameters(), lr=1e-5)
+def train_model(model, dataset, checkpoints_path, learning_rate):
+	optim = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 	dataloader = DataLoader(dataset['train'], collate_fn=collate_fn, batch_size=args.batch_num)
 
 	model = model.to(device)
@@ -153,7 +161,8 @@ def train_text_to_latent():
 	train_model(
 		model,
 		ds,
-		text_to_latent_checkpoints_path
+		text_to_latent_checkpoints_path,
+		args.t2l_lr
 	)
 
 def train_latent_to_text():
@@ -171,7 +180,8 @@ def train_latent_to_text():
 	train_model(
 		model,
 		ds,
-		latent_to_text_checkpoints_path
+		latent_to_text_checkpoints_path,
+		args.l2t_lr
 	)
 
 if not args.skip_t2l:
