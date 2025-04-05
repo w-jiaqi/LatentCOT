@@ -52,22 +52,9 @@ parser.add_argument(
 parser.add_argument(
 	"--no_cache", action='store_true', help="Disable caching for datasets (helps with disk space)"
 )
-# parser.add_argument(
-# 	"--skip_t2l", action="store_true", help="Skip text to latent training"
-# )
-
-# parser.add_argument(
-# 	"--skip_l2t", action="store_true", help="Skip latent to text training"
-# )
-
-# parser.add_argument(
-# 	"--t2l_lr", type=float, default=1e-2, help="Learning rate for text to latents"
-# )
-
-# parser.add_argument(
-# 	"--l2t_lr", type=float, default=1e-5, help="Learning rate for latents to text"
-# )
-
+parser.add_argument(
+	"--lr", type=int, default=1e-5, help="Learning rate"
+)
 
 args = parser.parse_args()
 
@@ -82,18 +69,6 @@ base_checkpoints_path = os.path.join(
 	args.dataset, 
 )
 
-# text_to_latent_checkpoints_path = os.path.join(
-# 	base_checkpoints_path,
-# 	args.checkpoints_name,
-# 	"text_to_latent",
-# )
-
-# latent_to_text_checkpoints_path = os.path.join(
-# 	base_checkpoints_path,
-# 	args.checkpoints_name,
-# 	"latent_to_text",
-# )
-
 model_checkpoints_path = os.path.join(
 	base_checkpoints_path,
 	args.checkpoints_name,
@@ -105,9 +80,6 @@ tokenizer_checkpoints_path = os.path.join(
 	args.checkpoints_name,
 	"tokenizer",
 )
-
-# print(f"Saving text2latent @ {text_to_latent_checkpoints_path}")
-# print(f"Saving latent2text @ {latent_to_text_checkpoints_path}")
 
 print(f"Saving model @ {model_checkpoints_path}")
 print(f"Saving tokenizer @ {tokenizer_checkpoints_path}")
@@ -156,50 +128,6 @@ def train_model(model, dataset, checkpoints_path, learning_rate):
 
 	model.save_pretrained(checkpoints_path)
 
-# def train_text_to_latent():
-# 	model = Text2Latent(model_id, tokenizer)
-
-# 	ds = get_text_to_latent_dataset(
-# 		dataset=base_ds,
-# 		tokenizer=tokenizer, 
-# 		embedding=model.embedding, 
-# 		latent_pool=args.latent_pool, 
-# 	)
-
-# 	print("Training text2latent")
-
-# 	train_model(
-# 		model,
-# 		ds,
-# 		text_to_latent_checkpoints_path,
-# 		args.t2l_lr
-# 	)
-
-# def train_latent_to_text():
-# 	model = Latent2Text(model_id, tokenizer)
-
-# 	ds = get_latent_to_text_dataset(
-# 		dataset=base_ds,
-# 		tokenizer=tokenizer, 
-# 		embedding=model.embedding, 
-# 		latent_pool=args.latent_pool, 
-# 	)
-
-# 	print("Training latent2text")
-
-# 	train_model(
-# 		model,
-# 		ds,
-# 		latent_to_text_checkpoints_path,
-# 		args.l2t_lr
-# 	)
-
-# if not args.skip_t2l:
-# 	train_text_to_latent()
-
-# if not args.skip_l2t:
-# 	train_latent_to_text()
-
 model = LatentCOTModel(model_id, tokenizer)
 
 ds = get_latent_cot_sft_dataset(
@@ -215,7 +143,7 @@ train_model(
 	model,
 	ds,
 	model_checkpoints_path,
-	1e-5
+	args.lr
 )
 
 tokenizer.save_pretrained(tokenizer_checkpoints_path)

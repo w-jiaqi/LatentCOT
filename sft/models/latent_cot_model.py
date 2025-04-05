@@ -82,13 +82,72 @@ class LatentCOTModel(nn.Module):
 
 	def generate(
 			self, 
-			inputs_ids: List[int], 
+			inputs_ids: torch.Tensor, # (seq_len,)
 			max_new_latents: int, 
 			max_new_tokens: int, 
-			probe_model: bool = False
+			probe_latents: bool = False
 	) -> str:
-		pass
+		inputs_embeds = self.embedding(inputs_ids) # (seq_len, latent_dim)
+
+		bos_col = torch.tensor(self.tokenizer.bos_token_id).unsqueeze(0)
+		bos_col_embed = self.embedding(bos_col)
+
+		start_latent_col = torch.tensor(self.tokenizer.start_latent_id).unsqueeze(0)
+		start_latent_col_embed = self.embedding(start_latent_col)
+
+		end_latent_col = torch.tensor(self.tokenizer.end_latent_id).unsqueeze(0)
+		end_latent_col_embed = self.embedding(end_latent_col)
+
+		start_cot_col = torch.tensor(self.tokenizer.start_cot_id).unsqueeze(0)
+		start_cot_col_embed = self.embedding(start_cot_col)
+
+		inputs_embeds = torch.cat((
+			bos_col_embed,
+			inputs_embeds,
+			start_latent_col_embed,
+		))
+
+		for _ in range(max_new_latents):
+			batched_inputs_embeds = inputs_embeds.unsqueeze(0)
+			attention_mask = torch.ones(batched_inputs_embeds.shape[:-1])
+
+			outputs = self.model(
+				inputs_embeds=batched_inputs_embeds,
+				attention_mask=attention_mask,
+				output_hidden_states=True
+			)
+
+			last_hidden_state = outputs.hidden_states[-1]
+			next_prediction = last_hidden_state[0][-1].unsqueeze(0) # ignore batch_dim, get hidden state from last token
+																	   # then reshape into 1 x latent_dim
+
+			inputs_embeds = torch.cat((
+				inputs_embeds,
+				next_prediction,
+			), dim=0)
+
+			if probe_latents:
+				_, greedy_index = torch.max(outputs.logits[0][-1], dim=0)
+				print(self.tokenizer.decode(greedy_index))
+
+
+		inputs_embeds = torch.cat((
+			inputs_embeds,
+			end_latent_col_embed,
+			start_cot_col_embed,
+		)).unsqueeze(0) # adding batch dim
+
+		attention_mask = torch.ones(inputs_embeds.shape[:-1])
+
+		output = self.model.generate(
+			inputs_embeds=inputs_embeds,
+			attention_mask=attention_mask,
+			max_new_tokens=max_new_tokens
+		)
 		
+		generated_text = self.tokenizer.decode(output[0]) # removing batch dim
+
+		return generated_text
 
 	def save_pretrained(self, path: str):
 		self.model.save_pretrained(path)
