@@ -31,6 +31,8 @@ args = parser.parse_args()
 tokenizer = LatentTokenizer(args.tokenizer)
 model = LatentCOTModel(args.model, tokenizer).to('cuda')
 
+print("Latent Chat Ready")
+
 while True:
 	prompt = input()
 
