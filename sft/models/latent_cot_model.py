@@ -83,22 +83,23 @@ class LatentCOTModel(nn.Module):
 	def generate(
 			self, 
 			inputs_ids: torch.Tensor, # (seq_len,)
+			output_cot: bool,
 			max_new_latents: int, 
 			max_new_tokens: int, 
 			probe_latents: bool = False
 	) -> str:
 		inputs_embeds = self.embedding(inputs_ids) # (seq_len, latent_dim)
 
-		bos_col = torch.tensor(self.tokenizer.bos_token_id).unsqueeze(0)
+		bos_col = torch.tensor(self.tokenizer.bos_token_id).unsqueeze(0).to('cuda')
 		bos_col_embed = self.embedding(bos_col)
 
-		start_latent_col = torch.tensor(self.tokenizer.start_latent_id).unsqueeze(0)
+		start_latent_col = torch.tensor(self.tokenizer.start_latent_id).unsqueeze(0).to('cuda')
 		start_latent_col_embed = self.embedding(start_latent_col)
 
-		end_latent_col = torch.tensor(self.tokenizer.end_latent_id).unsqueeze(0)
+		end_latent_col = torch.tensor(self.tokenizer.end_latent_id).unsqueeze(0).to('cuda')
 		end_latent_col_embed = self.embedding(end_latent_col)
 
-		start_cot_col = torch.tensor(self.tokenizer.start_cot_id).unsqueeze(0)
+		start_cot_col = torch.tensor(self.tokenizer.start_cot_id).unsqueeze(0).to('cuda')
 		start_cot_col_embed = self.embedding(start_cot_col)
 
 		inputs_embeds = torch.cat((
@@ -109,7 +110,7 @@ class LatentCOTModel(nn.Module):
 
 		for _ in range(max_new_latents):
 			batched_inputs_embeds = inputs_embeds.unsqueeze(0)
-			attention_mask = torch.ones(batched_inputs_embeds.shape[:-1])
+			attention_mask = torch.ones(batched_inputs_embeds.shape[:-1]).to('cuda')
 
 			outputs = self.model(
 				inputs_embeds=batched_inputs_embeds,
@@ -134,10 +135,15 @@ class LatentCOTModel(nn.Module):
 		inputs_embeds = torch.cat((
 			inputs_embeds,
 			end_latent_col_embed,
-			start_cot_col_embed,
 		)).unsqueeze(0) # adding batch dim
 
-		attention_mask = torch.ones(inputs_embeds.shape[:-1])
+		if output_cot:
+			inputs_embeds = torch.cat((
+				inputs_embeds,
+				start_cot_col_embed,
+			), dim=1) # along seq dim
+
+		attention_mask = torch.ones(inputs_embeds.shape[:-1]).to('cuda')
 
 		output = self.model.generate(
 			inputs_embeds=inputs_embeds,

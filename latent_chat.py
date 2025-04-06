@@ -36,4 +36,5 @@ while True:
 
 	prompt_ids = tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False)[0].to('cuda')
 
-	print(model.generate(prompt_ids, max_new_latents=21, max_new_tokens=256, probe_latents=True))
+	print(model.generate(prompt_ids, max_new_latents=21, max_new_tokens=256, probe_latents=True, output_cot=False))
+	print(model.generate(prompt_ids, max_new_latents=21, max_new_tokens=256, probe_latents=True, output_cot=True))
