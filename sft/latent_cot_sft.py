@@ -53,7 +53,7 @@ parser.add_argument(
 	"--no_cache", action='store_true', help="Disable caching for datasets (helps with disk space)"
 )
 parser.add_argument(
-	"--lr", type=int, default=1e-5, help="Learning rate"
+	"--lr", type=float, default=1e-5, help="Learning rate"
 )
 
 args = parser.parse_args()

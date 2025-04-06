@@ -148,8 +148,7 @@ def get_latent_cot_sft_dataset(
         ans_attention_mask = torch.ones(ans_inputs_embeds.shape[:-1])
 
         cot_labels = torch.cat((
-            torch.full((2 + question_length + latent_reasoning_length, ), IGNORE_ID), # ignore bos, start_latent
-            end_latent_col,
+            torch.full((3 + question_length + latent_reasoning_length, ), IGNORE_ID), # ignore bos, start_latent, end_latent
             start_cot_col,
             reasoning_ids,
             end_cot_col,
@@ -157,8 +156,7 @@ def get_latent_cot_sft_dataset(
         ), dim=0)
 
         ans_labels = torch.cat((
-            torch.full((2 + latent_reasoning_length + question_length,), IGNORE_ID), # ignore bos, start_latent
-            end_latent_col,
+            torch.full((3 + question_length + latent_reasoning_length,), IGNORE_ID), # ignore bos, start_latent, end_latent
             answer_ids,
             eos_col,
         ), dim=0)
