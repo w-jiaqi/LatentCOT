@@ -140,7 +140,7 @@ class LatentCOTModel(nn.Module):
 		if output_cot:
 			inputs_embeds = torch.cat((
 				inputs_embeds,
-				start_cot_col_embed,
+				start_cot_col_embed.unsqueeze(0),
 			), dim=1) # along seq dim
 
 		attention_mask = torch.ones(inputs_embeds.shape[:-1]).to('cuda')
