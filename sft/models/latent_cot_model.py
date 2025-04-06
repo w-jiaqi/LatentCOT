@@ -21,6 +21,7 @@ class LatentCOTModel(nn.Module):
         self.embedding = self.model.get_input_embeddings()
 
         if tie_weights:
+            print("Tying model weights")
             self.model.tie_weights()
 
     def parameters(self):
