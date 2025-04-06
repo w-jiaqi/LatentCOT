@@ -5,3 +5,5 @@ ds_cache/
 *.pyc
 checkpoints/
 __pycache__/
+*.out
+*.err

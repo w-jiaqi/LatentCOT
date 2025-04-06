@@ -11,6 +11,6 @@ srun --container-image=/lustre/fs0/scratch/pkeung/squash/nvidia+pytorch+24.10-py
      --container-mounts=/lustre/fs0 \
      bash -c "cd /lustre/fs0/scratch/pkeung/multiplication/LatentCOT && \
 			 source env/bin/activate && \
-             python sft/latent_cot_sft.py -d 4x4 -l 4 -m meta-llama/Llama-3.2-3B -t meta-llama/Llama-3.2-3B --num_train 100000 --batch_num 8 --checkpoints_name single_model --no_cache"
+             python sft/latent_cot_sft.py -d 4x4 -l 4 -m meta-llama/Llama-3.2-3B -t meta-llama/Llama-3.2-3B --batch_num 8 --checkpoints_name single_model --no_cache"
 
 # usage: sbatch run_latent_sft_4x4.sh
