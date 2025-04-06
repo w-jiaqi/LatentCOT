@@ -26,10 +26,14 @@ parser.add_argument(
 	"-t", "--tokenizer", type=str, required=True
 )
 
+parser.add_argument(
+	"--tie_weights", action='store_true'
+)
+
 args = parser.parse_args()
 
 tokenizer = LatentTokenizer(args.tokenizer)
-model = LatentCOTModel(args.model, tokenizer).to('cuda')
+model = LatentCOTModel(args.model, tokenizer, tie_weights=args.tie_weights).to('cuda')
 
 print("Latent Chat Ready")
 

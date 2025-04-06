@@ -50,7 +50,7 @@ parser.add_argument(
 	"--checkpoints_name", type=str, default=utils.get_cur_time_string(), help="Name of checkpoints folder underneath checkpoints_dir"
 )
 parser.add_argument(
-	"--latents_lr", type=float, default=1e-4, help="Latents learning rate"
+	"--latents_lr", type=float, default=1e-5, help="Latents learning rate"
 )
 parser.add_argument(
 	"--token_lr", type=float, default=1e-5, help="Token learning rate"

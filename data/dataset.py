@@ -81,7 +81,7 @@ def get_latent_cot_sft_dataset(
         latent_pool: int,
         num_proc: Optional[int] = None
 ) -> Union[DatasetDict, Dataset]:
-    start_latent_col = torch.tensor(tokenizer.start_latent_id).unsqueeze(0)
+    start_latent_col = torch.tensor(tokenizer.start_latent_id).unsqueeze(0) # we turn the ids into 1-dimensional tensors so they can be concat'd with other ids
     end_latent_col = torch.tensor(tokenizer.end_latent_id).unsqueeze(0)
 
     start_cot_col = torch.tensor(tokenizer.start_cot_id).unsqueeze(0)
@@ -148,8 +148,7 @@ def get_latent_cot_sft_dataset(
         ans_attention_mask = torch.ones(ans_inputs_embeds.shape[:-1])
 
         cot_labels = torch.cat((
-            torch.full((3 + question_length + latent_reasoning_length, ), IGNORE_ID), # ignore bos, start_latent, end_latent
-            start_cot_col,
+            torch.full((4 + question_length + latent_reasoning_length, ), IGNORE_ID), # ignore bos, start_latent, end_latent, start_cot
             reasoning_ids,
             end_cot_col,
             eos_col

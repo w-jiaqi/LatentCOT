@@ -11,7 +11,7 @@ class LossType(Enum):
     LATENTS = auto()
 
 class LatentCOTModel(nn.Module):
-    def __init__(self, model_id: str, tokenizer: LatentTokenizer, tie_weights: bool):
+    def __init__(self, model_id: str, tokenizer: LatentTokenizer, tie_weights: bool = False):
         super(LatentCOTModel, self).__init__()
 
         self.model = AutoModelForCausalLM.from_pretrained(model_id)
