@@ -4,7 +4,6 @@
 #SBATCH --gpus=1
 #SBATCH --job-name=latent_sft_4x4
 #SBATCH --output=%x_%j.out
-#SBATCH --error=%x_%j.err
 HF_TOKEN=$1
 
 srun --container-image=/lustre/fs0/scratch/pkeung/squash/nvidia+pytorch+24.10-py3.sqsh \
