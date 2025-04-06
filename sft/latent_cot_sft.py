@@ -65,7 +65,7 @@ parser.add_argument(
 	"--skip_tokens", action='store_true', help="Skip training of token loss"
 )
 parser.add_argument(
-	"--tie-weights", action='store_true', help="Tie weights of input and output embeddings"
+	"--tie_weights", action='store_true', help="Tie weights of input and output embeddings"
 )
 
 args = parser.parse_args()
