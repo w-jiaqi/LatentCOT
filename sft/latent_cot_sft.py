@@ -36,7 +36,9 @@ parser.add_argument(
 parser.add_argument(
     "-t", "--tokenizer", type=str, default="meta-llama/Llama-3.2-1B"
 )
-parser.add_argument("--checkpoints_dir", type=str, default="checkpoints/latent-cot-sft")
+parser.add_argument(
+	"--checkpoints_dir", type=str, default="checkpoints/latent-cot-sft"
+)
 parser.add_argument(
     "--num_train", type=int, default=None, help="Number of training examples to use"
 )
@@ -114,8 +116,8 @@ if base_ds is None:
 	sys.exit()
 
 def train_model(model, dataset, checkpoints_path, latents_lr, token_lr):
-	latents_optimizer = torch.optim.AdamW(model.parameters(), lr=latents_lr)
-	token_optimizer = torch.optim.AdamW(model.parameters(), lr=token_lr)
+	latents_optimizer = torch.optim.Adam(model.parameters(), lr=latents_lr)
+	token_optimizer = torch.optim.Adam(model.parameters(), lr=token_lr)
 
 	dataloader = DataLoader(dataset['train'], collate_fn=collate_fn, batch_size=args.batch_num)
 	model = model.to(device)
