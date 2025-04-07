@@ -169,6 +169,7 @@ ds = get_latent_cot_sft_dataset(
 	tokenizer=tokenizer,
 	embedding=model.embedding,
 	latent_pool=args.latent_pool,
+	num_proc=args.num_proc
 )
 
 print("Training model")
