@@ -169,8 +169,7 @@ ds = get_latent_cot_sft_dataset(
 	tokenizer=tokenizer,
 	embedding=model.embedding,
 	latent_pool=args.latent_pool,
-	num_proc=args.num_proc
-)
+) # TODO figure out why num_proc causes maximum depth recursion exceeded error here
 
 print("Training model")
 
