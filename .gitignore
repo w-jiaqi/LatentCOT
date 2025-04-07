@@ -8,3 +8,4 @@ __pycache__/
 *.out
 *.err
 logs/
+wandb/

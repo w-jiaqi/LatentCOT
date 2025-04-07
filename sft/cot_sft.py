@@ -70,7 +70,7 @@ print(
 
 training_args = TrainingArguments(
     output_dir=checkpoints_path,
-    report_to="none",
+    report_to="wandb",
     num_train_epochs=args.epochs,
     per_device_train_batch_size=8,
     optim="adamw_torch",

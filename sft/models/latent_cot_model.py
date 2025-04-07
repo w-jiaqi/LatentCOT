@@ -20,6 +20,12 @@ class LatentCOTModel(nn.Module):
         self.model.resize_token_embeddings(len(tokenizer))
         self.embedding = self.model.get_input_embeddings()
 
+        # self.embedding.weight.requires_grad = False
+        # self.model.get_output_embeddings().weight.requires_grad = False
+
+        # print(self.embedding.weight)
+        # print(self.model.get_output_embeddings().weight)
+
         if tie_weights:
             print("Tying model weights")
             self.model.tie_weights()
@@ -57,7 +63,7 @@ class LatentCOTModel(nn.Module):
             output_hidden_states=True
         )
 
-        pred_latents = outputs.hidden_states[-1]
+        pred_latents = outputs.hidden_states[len(outputs.hidden_states) // 2]
 
         loss_mask = labels_embeds_mask[:, 1:].contiguous().view(-1)
 
@@ -69,7 +75,7 @@ class LatentCOTModel(nn.Module):
         tgt_latents = tgt_latents.view(-1, latent_dim)
         tgt_latents = tgt_latents[loss_mask.bool()]
 
-        loss = F.mse_loss(pred_latents, tgt_latents, reduction='mean')
+        loss = F.mse_loss(pred_latents, tgt_latents, reduction='none').sum(dim=1).mean(dim=0)
 
         return loss
 
@@ -125,19 +131,19 @@ class LatentCOTModel(nn.Module):
                 output_hidden_states=True
             )
 
-            last_hidden_state = outputs.hidden_states[-1]
-            next_prediction = last_hidden_state[0][-1].unsqueeze(0) # ignore batch_dim, get hidden state from last token
+            middle_hidden_state = outputs.hidden_states[len(outputs.hidden_states) // 2]
+            next_prediction = middle_hidden_state[0][-1].unsqueeze(0) # ignore batch_dim, get hidden state from last token
                                                                        # then reshape into 1 x latent_dim
+            
+            if probe_latents:
+                output_embeddings = self.model.get_output_embeddings()(middle_hidden_state[0])
+                _, ids = torch.max(output_embeddings, dim=1)
+                print(self.tokenizer.decode(ids))
 
             inputs_embeds = torch.cat((
                 inputs_embeds,
                 next_prediction,
             ), dim=0)
-
-            if probe_latents:
-                _, greedy_index = torch.max(outputs.logits[0][-1], dim=0)
-                print(self.tokenizer.decode(greedy_index))
-
 
         inputs_embeds = torch.cat((
             inputs_embeds,

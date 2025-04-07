@@ -13,6 +13,9 @@ from sft.models.latent_tokenizer import LatentTokenizer
 from tqdm.auto import tqdm
 from data.multiplication_dataset import get_4x4_dataset
 from data.gsm8k_dataset import get_gsm8k_dataset
+import wandb
+
+wandb.login()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -71,6 +74,11 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
+
+run = wandb.init(
+	project="Latent COT SFT",
+	config=vars(args)
+)
 
 if args.no_cache:
 	print("Disabling dataset caching")
@@ -159,10 +167,12 @@ def train_model(model, dataset, checkpoints_path, latents_lr, token_lr):
 				postfix_dict['token_loss'] = token_loss_value
 
 			progress_bar.set_postfix(**postfix_dict)
+			run.log(postfix_dict)
 
 		print(f"Finished Epoch ({epoch})")
 
 	model.save_pretrained(checkpoints_path)
+
 
 model = LatentCOTModel(model_id, tokenizer, tie_weights=args.tie_weights)
 
@@ -197,3 +207,5 @@ train_model(
 )
 
 tokenizer.save_pretrained(tokenizer_checkpoints_path)
+
+run.finish()
