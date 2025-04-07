@@ -20,6 +20,9 @@ class LatentCOTModel(nn.Module):
         self.model.resize_token_embeddings(len(tokenizer))
         self.embedding = self.model.get_input_embeddings()
 
+        hidden_size = self.model.config.hidden_size
+        self.latent_head = nn.Linear(hidden_size, hidden_size)
+
         if tie_weights:
             print("Tying model weights")
             self.model.tie_weights()
@@ -56,8 +59,10 @@ class LatentCOTModel(nn.Module):
             attention_mask=src_attention_mask,
             output_hidden_states=True
         )
+        hidden_states = outputs.hidden_states[-1]  # [batch_size, seq_len, hidden_size]
+        pred_latents = self.latent_head(hidden_states)  # [batch_size, seq_len, hidden_size]
 
-        pred_latents = outputs.hidden_states[-1]
+        # pred_latents = outputs.hidden_states[-1]
 
         loss_mask = labels_embeds_mask[:, 1:].contiguous().view(-1)
 
