@@ -97,21 +97,10 @@ def test_latent_dataset():
 	}
 
 	train_ds = Dataset.from_dict(fake_data)
-	test_ds = Dataset.from_dict(test_ds)
+	test_ds = Dataset.from_dict(fake_data)
 
 	dataset = DatasetDict({
 		'train': train_ds,
 		'test': test_ds
 	})
-
-	model = AutoModelForCausalLM.from_pretrained('meta-llama/Llama-3.2-1B')
-	tokenizer = LatentTokenizer('meta-llama/Llama-3.2-1B')
-
-	latent_dataset = get_latent_cot_sft_dataset(
-		dataset=dataset,
-		tokenizer=tokenizer,
-		embedding=model.get_input_embeddings(),
-		latent_pool=4
-	)
-
 	
