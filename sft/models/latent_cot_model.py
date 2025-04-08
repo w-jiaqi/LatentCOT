@@ -11,7 +11,7 @@ class LossType(Enum):
     LATENTS = auto()
 
 class LatentCOTModel(nn.Module):
-    def __init__(self, model_id: str, tokenizer: LatentTokenizer, tie_weights: bool = False):
+    def __init__(self, model_id: str, tokenizer: LatentTokenizer, tie_weights: bool = False, use_last_layer = False):
         super(LatentCOTModel, self).__init__()
 
         self.model = AutoModelForCausalLM.from_pretrained(model_id)
@@ -29,6 +29,8 @@ class LatentCOTModel(nn.Module):
         if tie_weights:
             print("Tying model weights")
             self.model.tie_weights()
+        
+        self.use_last_layer = use_last_layer
 
     def parameters(self):
         return self.model.parameters()
@@ -63,7 +65,7 @@ class LatentCOTModel(nn.Module):
             output_hidden_states=True
         )
 
-        pred_latents = outputs.hidden_states[len(outputs.hidden_states) // 2]
+        pred_latents = outputs.hidden_states[-1] if self.use_last_layer else outputs.hidden_states[len(outputs.hidden_states) // 2]
 
         loss_mask = labels_embeds_mask[:, 1:].contiguous().view(-1)
 
@@ -131,12 +133,12 @@ class LatentCOTModel(nn.Module):
                 output_hidden_states=True
             )
 
-            middle_hidden_state = outputs.hidden_states[len(outputs.hidden_states) // 2]
-            next_prediction = middle_hidden_state[0][-1].unsqueeze(0) # ignore batch_dim, get hidden state from last token
+            hidden_layer = outputs.hidden_states[-1] if self.use_last_layer else outputs.hidden_states[len(outputs.hidden_states) // 2]
+            next_prediction = hidden_layer[0][-1].unsqueeze(0) # ignore batch_dim, get hidden state from last token
                                                                        # then reshape into 1 x latent_dim
             
             if probe_latents:
-                output_embeddings = self.model.get_output_embeddings()(middle_hidden_state[0])
+                output_embeddings = self.model.get_output_embeddings()(hidden_layer[0])
                 _, ids = torch.max(output_embeddings, dim=1)
                 print(self.tokenizer.decode(ids))
 

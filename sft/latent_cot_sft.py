@@ -72,6 +72,9 @@ parser.add_argument(
 parser.add_argument(
 	"--tie_weights", action='store_true', help="Tie weights of input and output embeddings"
 )
+parser.add_argument(
+	"--use_last_layer", action='store_true', help="Use last hidden layer of model as latent predictions"
+)
 
 args = parser.parse_args()
 
@@ -174,7 +177,7 @@ def train_model(model, dataset, checkpoints_path, latents_lr, token_lr):
 	model.save_pretrained(checkpoints_path)
 
 
-model = LatentCOTModel(model_id, tokenizer, tie_weights=args.tie_weights)
+model = LatentCOTModel(model_id, tokenizer, tie_weights=args.tie_weights, use_last_layer=args.use_last_layer)
 
 ds = get_latent_cot_sft_dataset(
 	dataset=base_ds,
