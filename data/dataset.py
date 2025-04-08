@@ -1,48 +1,39 @@
 import sys, os
-sys.path.insert(0, os.path.abspath("."))  # hack for importsimport torch
+sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
 from datasets import load_dataset, DatasetDict, Dataset
 import torch
 from sft.models.latent_tokenizer import LatentTokenizer
 from transformers import PreTrainedTokenizerFast
-from typing import Union, Optional
+from typing import Union, Optional, Tuple
 import math
+import torch.nn.functional as F
 
 IGNORE_ID = -100
 
-def compress_embeddings(embeddings: torch.Tensor, latent_pool: int) -> torch.Tensor:
-    seq_length, latent_dim = embeddings.shape
-    latent_seq_length = math.ceil(seq_length / latent_pool)
+def compress_embeddings(embeddings: torch.Tensor, latent_pool: int) -> Tuple[int, torch.Tensor]:
+    batched = len(embeddings.shape) == 3
 
-    latent_embeddings = torch.zeros(latent_seq_length, latent_dim)
+    if not batched:
+        embeddings = embeddings.unsqueeze(0)
     
-    for i in range(0, seq_length, latent_pool):
-        latent_embeddings[i // latent_pool, :] = embeddings[i:i+latent_pool, :].mean(dim=0)
-
-
+    embeddings_reshaped = embeddings.transpose(1, 2)
+    
+    latent_embeddings = F.avg_pool1d(
+        embeddings_reshaped,
+        kernel_size=latent_pool,
+        stride=latent_pool,
+        ceil_mode=True
+    )
+    
+    latent_embeddings = latent_embeddings.transpose(1, 2)
+    
+    latent_seq_length = latent_embeddings.shape[1]
+    
+    if not batched:
+        latent_embeddings = latent_embeddings.squeeze(0)
+    
     return latent_seq_length, latent_embeddings
-
-# def get_gsm8k_dataset(tokenizer):
-#     def format_gsm8k_example(example):
-#         question = example["question"]
-#         answer = example["answer"]
-
-#         prompt = {
-#             "role": "user",
-#             "content": f"Question: {question} Let's think step by step. At the end, you MUST write the answer as an integer after '####'",
-#         }
-#         completion = {"role": "assistant", "content": f"Answer: {answer}"}
-
-#         return apply_chat_template(
-#             {"prompt": [prompt], "completion": [completion]}, tokenizer
-#         )
-
-#     ds = load_dataset("openai/gsm8k", "main")
-
-#     ds["train"] = ds["train"].map(format_gsm8k_example)
-#     ds["test"] = ds["test"].map(format_gsm8k_example)
-
-#     return ds
 
 # labels, input_ids, attention_mask
 def get_cot_sft_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: PreTrainedTokenizerFast) -> Union[DatasetDict, Dataset]:
