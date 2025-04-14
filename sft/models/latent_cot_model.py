@@ -129,8 +129,9 @@ class LatentCOTModel(nn.Module):
             )
             
             if probe_latents:
-                sort = torch.sort(outputs.logits[0][-1], descending=True)
-                print(repr(self.tokenizer.decode(sort.indices[:4])))
+                sort = torch.sort(torch.softmax(outputs.logits[0][-1], dim=0), descending=True)
+                print(sort.values[:8])
+                print(repr(self.tokenizer.decode(sort.indices[:8])))
                 # print(self.tokenizer.decode(greedy_index))
 
             hidden_layer = outputs.hidden_states[-1] 
