@@ -96,18 +96,20 @@ class LatentCOTModel(nn.Module):
             max_new_tokens: int, 
             probe_latents: bool = False
     ) -> str:
+        torch.set_default_device('cuda')
+
         inputs_embeds = self.embedding(inputs_ids) # (seq_len, latent_dim)
 
-        bos_col = torch.tensor(self.tokenizer.bos_token_id).unsqueeze(0).to('cuda')
+        bos_col = torch.tensor(self.tokenizer.bos_token_id).unsqueeze(0)
         bos_col_embed = self.embedding(bos_col)
 
-        start_latent_col = torch.tensor(self.tokenizer.start_latent_id).unsqueeze(0).to('cuda')
+        start_latent_col = torch.tensor(self.tokenizer.start_latent_id).unsqueeze(0)
         start_latent_col_embed = self.embedding(start_latent_col)
 
-        end_latent_col = torch.tensor(self.tokenizer.end_latent_id).unsqueeze(0).to('cuda')
+        end_latent_col = torch.tensor(self.tokenizer.end_latent_id).unsqueeze(0)
         end_latent_col_embed = self.embedding(end_latent_col)
 
-        start_cot_col = torch.tensor(self.tokenizer.start_cot_id).unsqueeze(0).to('cuda')
+        start_cot_col = torch.tensor(self.tokenizer.start_cot_id).unsqueeze(0)
         start_cot_col_embed = self.embedding(start_cot_col)
 
         inputs_embeds = torch.cat((
@@ -118,27 +120,28 @@ class LatentCOTModel(nn.Module):
 
         for _ in range(max_new_latents):
             batched_inputs_embeds = inputs_embeds.unsqueeze(0)
-            attention_mask = torch.ones(batched_inputs_embeds.shape[:-1]).to('cuda')
+            attention_mask = torch.ones(batched_inputs_embeds.shape[:-1])
 
             outputs = self.model(
                 inputs_embeds=batched_inputs_embeds,
                 attention_mask=attention_mask,
                 output_hidden_states=True
             )
+            
+            if probe_latents:
+                sort = torch.sort(outputs.logits[0][-1], descending=True)
+                print(repr(self.tokenizer.decode(sort.indices[:4])))
+                # print(self.tokenizer.decode(greedy_index))
 
             hidden_layer = outputs.hidden_states[-1] 
             next_prediction = torch.nn.functional.softmax(self.output_embedding(hidden_layer[0][-1]), dim=0) @ self.embedding.weight
             next_prediction = next_prediction.unsqueeze(0)
-            
-            if probe_latents:
-                output_embeddings = self.model.get_output_embeddings()(hidden_layer[0])
-                _, ids = torch.max(output_embeddings, dim=1)
-                print(self.tokenizer.decode(ids))
 
             inputs_embeds = torch.cat((
                 inputs_embeds,
                 next_prediction,
             ), dim=0)
+
 
         inputs_embeds = torch.cat((
             inputs_embeds,
@@ -151,7 +154,7 @@ class LatentCOTModel(nn.Module):
                 start_cot_col_embed.unsqueeze(0),
             ), dim=1) # along seq dim
 
-        attention_mask = torch.ones(inputs_embeds.shape[:-1]).to('cuda')
+        attention_mask = torch.ones(inputs_embeds.shape[:-1])
 
         output = self.model.generate(
             inputs_embeds=inputs_embeds,

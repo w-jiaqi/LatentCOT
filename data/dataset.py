@@ -70,7 +70,6 @@ def get_latent_cot_sft_dataset(
         tokenizer: LatentTokenizer,
         embedding: torch.nn.Module,
         latent_pool: int,
-        num_proc: Optional[int] = None
 ) -> Union[DatasetDict, Dataset]:
     def preprocess_fn(batch):
         torch.set_default_device('cuda')
@@ -98,10 +97,6 @@ def get_latent_cot_sft_dataset(
         question_ids = tokenizer.encode(question, return_tensors='pt', add_special_tokens=False)[0] # remove batch dimension
         reasoning_ids = tokenizer.encode(reasoning, return_tensors='pt', add_special_tokens=False)[0]
         answer_ids = tokenizer.encode(answer, return_tensors='pt', add_special_tokens=False)[0]
-
-        # print(f"question_ids: {question_ids.shape}")
-        # print(f"reasoning_ids: {reasoning_ids.shape}")
-        # print(f"answer_ids: {answer_ids.shape}")
 
         question_embeddings = embedding(question_ids)
         reasoning_embeddings = embedding(reasoning_ids)
@@ -181,7 +176,7 @@ def get_latent_cot_sft_dataset(
             'labels_embeds_mask': labels_embeds_mask
         }
 
-    dataset = dataset.map(preprocess_fn, batched=True, batch_size=1, remove_columns=dataset['train'].column_names)
+    dataset = dataset.map(preprocess_fn, batched=True, batch_size=1, with_indices=False, remove_columns=['question', 'reasoning', 'answer'])
     # dataset.set_format('pt')
 
     return dataset

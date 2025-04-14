@@ -49,9 +49,6 @@ parser.add_argument(
 	"--batch_num", type=int, default=32
 )
 parser.add_argument(
-	"--num_proc", type=int, default=None
-)
-parser.add_argument(
 	"--checkpoints_name", type=str, default=utils.get_cur_time_string(), help="Name of checkpoints folder underneath checkpoints_dir"
 )
 parser.add_argument(
@@ -113,9 +110,9 @@ tokenizer = LatentTokenizer(args.tokenizer)
 base_ds = None
 
 if args.dataset == "4x4":
-    base_ds = get_4x4_dataset(num_train=args.num_train, num_proc=args.num_proc)
+    base_ds = get_4x4_dataset(num_train=args.num_train)
 elif args.dataset == "gsm8k":
-    base_ds = get_gsm8k_dataset(num_train=args.num_train, num_proc=args.num_proc)
+    base_ds = get_gsm8k_dataset(num_train=args.num_train)
 else:
     raise ValueError(f"Unrecognized dataset: {args.dataset}")
 
@@ -182,7 +179,7 @@ ds = get_latent_cot_sft_dataset(
 	tokenizer=tokenizer,
 	embedding=model.embedding,
 	latent_pool=args.latent_pool,
-) # TODO figure out why num_proc causes maximum depth recursion exceeded error here
+) 
 
 print("Training model")
 

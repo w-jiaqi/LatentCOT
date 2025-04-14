@@ -14,4 +14,4 @@
 
 cd /gscratch/ark/anjo0/LatentCOT
 source env/bin/activate
-python sft/latent_cot_sft.py -d 4x4 -l 4 --batch_num 4
+python sft/latent_cot_sft.py -d 4x4 -l 4 --batch_num 4 --checkpoints_name cot_and_ans

@@ -45,51 +45,55 @@ model = LatentCOTModel(args.model, tokenizer, tie_weights=args.tie_weights).to('
 print("Latent Chat Ready")
 
 while True:
-	# prompt = input()
+	prompt = input()
 
-	# prompt_ids = tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False)[0].to('cuda')
+	prompt_ids = tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False)[0].to('cuda')
 
-	# print(model.generate(prompt_ids, max_new_latents=args.max_new_latents, max_new_tokens=256, probe_latents=False, output_cot=False))
-	# print(model.generate(prompt_ids, max_new_latents=args.max_new_latents, max_new_tokens=256, probe_latents=False, output_cot=True))
+	print(model.generate(prompt_ids, max_new_latents=args.max_new_latents, max_new_tokens=256, output_cot=False))
+	print(model.generate(prompt_ids, max_new_latents=args.max_new_latents, max_new_tokens=256, output_cot=True))
 
-	torch.set_default_device('cuda')
-	question = "5 6 3 2 * 7 4 3 4"
-	reasoning = "5 5 5 6 1 + 0 0 6 4 9 0 ( 5 5 1 1 1 1 ) + 0 0 5 9 0 7 0 ( 5 5 6 0 2 8 0 ) + 0 0 0 0 6 4 9 0"
-	question_ids = tokenizer.encode(question, return_tensors="pt", add_special_tokens=False).to('cuda')[0]
-	reasoning_ids = tokenizer.encode(reasoning, return_tensors="pt", add_special_tokens=False).to('cuda')[0]
+# torch.set_default_device('cuda')
+# question = "5 6 3 2 * 7 4 3 4"
+# # reasoning = "5 5 5 6 1 + 0 0 6 4 9 0 ( 5 5 1 1 1 1 ) + 0 0 5 9 0 7 0 ( 5 5 6 0 2 8 0 ) + 0 0 0 0 6 4 9 0"
+# reasoning = "6 7 1 1 3 + 0 4 8 7 0 2 ( 6 1 0 9 3 2 ) + 0 0 4 8 7 0 2 ( 6 1 4 7 1 3 2 ) + 0 0 0 2 7 3 6 3"
+# question_ids = tokenizer.encode(question, return_tensors="pt", add_special_tokens=False).to('cuda')[0]
+# reasoning_ids = tokenizer.encode(reasoning, return_tensors="pt", add_special_tokens=False).to('cuda')[0]
 
-	question_embeddings = model.embedding(question_ids)
-	latent_reasoning_length, latent_reasoning_embeddings = compress_embeddings(model.embedding(reasoning_ids), 4)
+# question_embeddings = model.embedding(question_ids)
+# latent_reasoning_length, latent_reasoning_embeddings = compress_embeddings(model.embedding(reasoning_ids), 4)
 
-	bos_col = torch.tensor(tokenizer.bos_token_id).unsqueeze(0).to('cuda')
-	bos_col_embed = model.embedding(bos_col)
+# bos_col = torch.tensor(tokenizer.bos_token_id).unsqueeze(0).to('cuda')
+# bos_col_embed = model.embedding(bos_col)
 
-	start_latent_col = torch.tensor(tokenizer.start_latent_id).unsqueeze(0).to('cuda')
-	start_latent_col_embed = model.embedding(start_latent_col)
+# start_latent_col = torch.tensor(tokenizer.start_latent_id).unsqueeze(0).to('cuda')
+# start_latent_col_embed = model.embedding(start_latent_col)
 
-	end_latent_col = torch.tensor(tokenizer.end_latent_id).unsqueeze(0).to('cuda')
-	end_latent_col_embed = model.embedding(end_latent_col)
+# end_latent_col = torch.tensor(tokenizer.end_latent_id).unsqueeze(0).to('cuda')
+# end_latent_col_embed = model.embedding(end_latent_col)
 
-	print(bos_col_embed.shape)
-	print(question_embeddings.shape)
-	print(latent_reasoning_embeddings.shape)
-	print(start_latent_col_embed.shape)
+# start_cot_col = torch.tensor(tokenizer.start_cot_id).unsqueeze(0).to('cuda')
+# start_cot_col_embed = model.embedding(start_cot_col)
 
-	inputs_embeds = torch.cat((
-		bos_col_embed,
-		question_embeddings,
-		start_latent_col_embed,
-		latent_reasoning_embeddings,
-		end_latent_col_embed,
-	), dim=0).unsqueeze(0)
+# print(bos_col_embed.shape)
+# print(question_embeddings.shape)
+# print(latent_reasoning_embeddings.shape)
+# print(start_latent_col_embed.shape)
 
-	attention_mask = torch.ones(inputs_embeds.shape[:-1])
+# inputs_embeds = torch.cat((
+# 	bos_col_embed,
+# 	question_embeddings,
+# 	start_latent_col_embed,
+# 	latent_reasoning_embeddings,
+# 	end_latent_col_embed,
+# 	start_cot_col_embed
+# ), dim=0).unsqueeze(0)
 
-	output = model.model.generate(
-		inputs_embeds=inputs_embeds,
-		attention_mask=attention_mask,
-		max_new_tokens=256
-	)
+# attention_mask = torch.ones(inputs_embeds.shape[:-1])
 
-	print(tokenizer.decode(output[0]))
+# output = model.model.generate(
+# 	inputs_embeds=inputs_embeds,
+# 	attention_mask=attention_mask,
+# 	max_new_tokens=256
+# )
 
+# print(tokenizer.decode(output[0]))
