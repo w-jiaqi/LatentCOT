@@ -72,25 +72,25 @@ def get_latent_cot_sft_dataset(
         latent_pool: int,
         num_proc: Optional[int] = None
 ) -> Union[DatasetDict, Dataset]:
-    start_latent_col = torch.tensor(tokenizer.start_latent_id).unsqueeze(0) # we turn the ids into 1-dimensional tensors so they can be concat'd with other ids
-    end_latent_col = torch.tensor(tokenizer.end_latent_id).unsqueeze(0)
-
-    start_cot_col = torch.tensor(tokenizer.start_cot_id).unsqueeze(0)
-    end_cot_col = torch.tensor(tokenizer.end_cot_id).unsqueeze(0)
-
-    bos_col = torch.tensor(tokenizer.bos_token_id).unsqueeze(0)
-    eos_col = torch.tensor(tokenizer.eos_token_id).unsqueeze(0)
-
-    start_latent_col_embed = embedding(start_latent_col)
-    end_latent_col_embed = embedding(end_latent_col)
-
-    start_cot_col_embed = embedding(start_cot_col)
-    end_cot_col_embed = embedding(end_cot_col)
-
-    bos_col_embed = embedding(bos_col)
-    eos_col_embed = embedding(eos_col)
-
     def preprocess_fn(batch):
+        torch.set_default_device('cuda')
+        start_latent_col = torch.tensor(tokenizer.start_latent_id).unsqueeze(0) # we turn the ids into 1-dimensional tensors so they can be concat'd with other ids
+        end_latent_col = torch.tensor(tokenizer.end_latent_id).unsqueeze(0)
+
+        start_cot_col = torch.tensor(tokenizer.start_cot_id).unsqueeze(0)
+        end_cot_col = torch.tensor(tokenizer.end_cot_id).unsqueeze(0)
+
+        bos_col = torch.tensor(tokenizer.bos_token_id).unsqueeze(0)
+        eos_col = torch.tensor(tokenizer.eos_token_id).unsqueeze(0)
+
+        start_latent_col_embed = embedding(start_latent_col)
+        end_latent_col_embed = embedding(end_latent_col)
+
+        start_cot_col_embed = embedding(start_cot_col)
+        end_cot_col_embed = embedding(end_cot_col)
+        
+        bos_col_embed = embedding(bos_col)
+        eos_col_embed = embedding(eos_col)
         question = batch['question'][0] # batch size of 1
         reasoning = batch['reasoning'][0]
         answer = batch['answer'][0]
@@ -181,8 +181,8 @@ def get_latent_cot_sft_dataset(
             'labels_embeds_mask': labels_embeds_mask
         }
 
-    dataset = dataset.map(preprocess_fn, batched=True, batch_size=1, num_proc=num_proc, remove_columns=dataset['train'].column_names)
-    dataset.set_format('pt')
+    dataset = dataset.map(preprocess_fn, batched=True, batch_size=1, remove_columns=dataset['train'].column_names)
+    # dataset.set_format('pt')
 
     return dataset
 

@@ -5,13 +5,14 @@ from torch.nn import functional as F
 from transformers import AutoModelForCausalLM
 from sft.models.latent_tokenizer import LatentTokenizer
 from enum import Enum, auto
+import torch.nn.init as init
 
 class LossType(Enum):
     TOKEN = auto()
     LATENTS = auto()
 
 class LatentCOTModel(nn.Module):
-    def __init__(self, model_id: str, tokenizer: LatentTokenizer, tie_weights: bool = False, use_last_layer = False):
+    def __init__(self, model_id: str, tokenizer: LatentTokenizer, tie_weights: bool = False):
         super(LatentCOTModel, self).__init__()
 
         self.model = AutoModelForCausalLM.from_pretrained(model_id)
@@ -19,21 +20,11 @@ class LatentCOTModel(nn.Module):
 
         self.model.resize_token_embeddings(len(tokenizer))
         self.embedding = self.model.get_input_embeddings()
-
-        # self.embedding.weight.requires_grad = False
-        # self.model.get_output_embeddings().weight.requires_grad = False
-
-        # print(self.embedding.weight)
-        # print(self.model.get_output_embeddings().weight)
+        self.output_embedding = self.model.get_output_embeddings()
 
         if tie_weights:
             print("Tying model weights")
             self.model.tie_weights()
-        
-        self.use_last_layer = use_last_layer
-
-    def parameters(self):
-        return self.model.parameters()
     
     def forward(
             self, 
@@ -65,7 +56,9 @@ class LatentCOTModel(nn.Module):
             output_hidden_states=True
         )
 
-        pred_latents = outputs.hidden_states[-1] if self.use_last_layer else outputs.hidden_states[len(outputs.hidden_states) // 2]
+        hidden_states = outputs.hidden_states[-1]
+        
+        pred_latents = torch.nn.functional.softmax(self.output_embedding(hidden_states), dim=-1) @ self.embedding.weight
 
         loss_mask = labels_embeds_mask[:, 1:].contiguous().view(-1)
 
@@ -133,9 +126,9 @@ class LatentCOTModel(nn.Module):
                 output_hidden_states=True
             )
 
-            hidden_layer = outputs.hidden_states[-1] if self.use_last_layer else outputs.hidden_states[len(outputs.hidden_states) // 2]
-            next_prediction = hidden_layer[0][-1].unsqueeze(0) # ignore batch_dim, get hidden state from last token
-                                                                       # then reshape into 1 x latent_dim
+            hidden_layer = outputs.hidden_states[-1] 
+            next_prediction = torch.nn.functional.softmax(self.output_embedding(hidden_layer[0][-1]), dim=0) @ self.embedding.weight
+            next_prediction = next_prediction.unsqueeze(0)
             
             if probe_latents:
                 output_embeddings = self.model.get_output_embeddings()(hidden_layer[0])

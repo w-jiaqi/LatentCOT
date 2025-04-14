@@ -31,12 +31,13 @@ def get_4x4_dataset(num_train: Optional[int] = None, num_proc: Optional[int] = N
             "train": TRAIN_4x4_PATH,
             "test": TEST_4x4_PATH,
         },
+        streaming=True
     )
 
-    if num_train != None:
-        ds["train"] = ds["train"].select(range(num_train))
+    # if num_train != None:
+    #     ds["train"] = ds["train"].select(range(num_train))
 
-    ds = ds.map(preprocess_fn, batched=False, num_proc=num_proc, remove_columns=['text'])
+    ds = ds.map(preprocess_fn, batched=False, remove_columns=['text'])
     
     return ds
 
@@ -61,12 +62,13 @@ def get_5x5_dataset(num_train: Optional[int] = None, num_proc: Optional[int] = N
             "train": TRAIN_5x5_PATH,
             "test": TEST_5x5_PATH,
         },
+        streaming=True
     )
 
-    if num_train != None:
-        ds["train"] = ds["train"].select(range(num_train))
+    # if num_train != None:
+    #     ds["train"] = ds["train"].select(range(num_train))
 
-    ds = ds.map(preprocess_fn, batched=False, num_proc=num_proc, remove_columns=['text'])
+    ds = ds.map(preprocess_fn, batched=False, remove_columns=['text'])
     
     return ds
 

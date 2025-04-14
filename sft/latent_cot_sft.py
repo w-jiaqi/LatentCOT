@@ -72,9 +72,6 @@ parser.add_argument(
 parser.add_argument(
 	"--tie_weights", action='store_true', help="Tie weights of input and output embeddings"
 )
-parser.add_argument(
-	"--use_last_layer", action='store_true', help="Use last hidden layer of model as latent predictions"
-)
 
 args = parser.parse_args()
 
@@ -126,7 +123,8 @@ if base_ds is None:
 	print("No dataset found, exiting")
 	sys.exit()
 
-def train_model(model, dataset, checkpoints_path, latents_lr, token_lr):
+def train_model(model: LatentCOTModel, dataset, checkpoints_path, latents_lr, token_lr):
+
 	latents_optimizer = torch.optim.Adam(model.parameters(), lr=latents_lr)
 	token_optimizer = torch.optim.Adam(model.parameters(), lr=token_lr)
 
@@ -147,7 +145,7 @@ def train_model(model, dataset, checkpoints_path, latents_lr, token_lr):
 
 				latents_optimizer.zero_grad()
 
-				latents_loss.backward()
+				latents_loss.backward(retain_graph=True)
 				latents_optimizer.step()
 
 				latents_loss_value = latents_loss.item()
@@ -177,7 +175,7 @@ def train_model(model, dataset, checkpoints_path, latents_lr, token_lr):
 	model.save_pretrained(checkpoints_path)
 
 
-model = LatentCOTModel(model_id, tokenizer, tie_weights=args.tie_weights, use_last_layer=args.use_last_layer)
+model = LatentCOTModel(model_id, tokenizer, tie_weights=args.tie_weights)
 
 ds = get_latent_cot_sft_dataset(
 	dataset=base_ds,
