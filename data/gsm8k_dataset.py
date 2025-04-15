@@ -5,40 +5,70 @@ from datasets import load_dataset, DatasetDict, Dataset
 from typing import Union, Optional
 import torch
 
+gsm8k_train_path = "data/gsm8k/train.jsonl"
+gsm8k_test_path = "data/gsm8k/test.jsonl"
+
 def get_gsm8k_dataset(num_train: Optional[int] = None, num_proc: Optional[int] = None) -> Union[DatasetDict, Dataset]:
-    ds_raw = load_dataset("gsm8k", "main")
-    
-    if num_train is not None:
-        ds_raw["train"] = ds_raw["train"].select(range(num_train))
-    
-    print(f"Subsetting training set to {num_train} examples")
     def preprocess_fn(example):
-        q = example["question"].strip()
-        a = example["answer"].strip()
-        
-        text = q + "||" + a
-        
-        question = text.split("||")[0].strip()
-        full_answer = text.split("||")[1].strip()
-        
-        if "####" in full_answer:
-            parts = full_answer.split("####", 1)
-            reasoning = parts[0].strip()
-            answer = parts[1].strip()
+        question = example['question']
+        full_answer = example['answer']
+
+        reasoning = full_answer.split("\n####")[0].strip()
+        answer = full_answer.split("\n####")[1].strip()
+
         return {
             "question": question,
             "reasoning": reasoning,
             "answer": answer,
         }
-    
-    ds = ds_raw.map(
-        preprocess_fn,
-        batched=False,
-        num_proc=num_proc,
-        remove_columns=ds_raw["train"].column_names,
+
+    ds = load_dataset(
+        "json", 
+        data_files={
+            "train": gsm8k_train_path,
+            "test": gsm8k_test_path,
+        },
+        streaming=True
     )
+
+    ds = ds.map(preprocess_fn, batched=False, remove_columns=['question', 'answer'])
     
     return ds
+
+# def get_gsm8k_dataset(num_train: Optional[int] = None, num_proc: Optional[int] = None) -> Union[DatasetDict, Dataset]:
+#     ds_raw = load_dataset("gsm8k", "main")
+    
+#     if num_train is not None:
+#         ds_raw["train"] = ds_raw["train"].select(range(num_train))
+    
+#     print(f"Subsetting training set to {num_train} examples")
+#     def preprocess_fn(example):
+#         q = example["question"].strip()
+#         a = example["answer"].strip()
+        
+#         text = q + "||" + a
+        
+#         question = text.split("||")[0].strip()
+#         full_answer = text.split("||")[1].strip()
+        
+#         if "####" in full_answer:
+#             parts = full_answer.split("####", 1)
+#             reasoning = parts[0].strip()
+#             answer = parts[1].strip()
+#         return {
+#             "question": question,
+#             "reasoning": reasoning,
+#             "answer": answer,
+#         }
+    
+#     ds = ds_raw.map(
+#         preprocess_fn,
+#         batched=False,
+#         num_proc=num_proc,
+#         remove_columns=ds_raw["train"].column_names,
+#     )
+    
+#     return ds
 
 
 def format_gsm8k_example_base_model(example):
