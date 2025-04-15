@@ -169,6 +169,9 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path, latents_lr, to
 
 		print(f"Finished Epoch ({epoch})")
 
+		model.save_pretrained(os.path.join(checkpoints_path, f"epoch_{epoch}"))
+		tokenizer.save_pretrained(os.path.join(checkpoints_path, f"epoch_{epoch}"))
+
 	model.save_pretrained(checkpoints_path)
 
 
@@ -207,3 +210,7 @@ train_model(
 tokenizer.save_pretrained(tokenizer_checkpoints_path)
 
 run.finish()
+
+print(f"Model saved @ {model_checkpoints_path}")
+print(f"Tokenizer saved @ {tokenizer_checkpoints_path}")
+print("Finished training")

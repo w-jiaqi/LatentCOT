@@ -49,8 +49,8 @@ while True:
 
 	prompt_ids = tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False)[0].to('cuda')
 
+	print(model.generate(prompt_ids, max_new_latents=args.max_new_latents, max_new_tokens=256, probe_latents=True, output_cot=True))
 	print(model.generate(prompt_ids, max_new_latents=args.max_new_latents, max_new_tokens=256, output_cot=False))
-	print(model.generate(prompt_ids, max_new_latents=args.max_new_latents, max_new_tokens=256, output_cot=True))
 
 # torch.set_default_device('cuda')
 # question = "5 6 3 2 * 7 4 3 4"

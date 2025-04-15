@@ -138,6 +138,9 @@ class LatentCOTModel(nn.Module):
             next_prediction = torch.nn.functional.softmax(self.output_embedding(hidden_layer[0][-1]), dim=0) @ self.embedding.weight
             next_prediction = next_prediction.unsqueeze(0)
 
+            if (torch.nn.functional.mse_loss(end_latent_col_embed, next_prediction, reduction="sum") < 1e-3).all():
+                break
+
             inputs_embeds = torch.cat((
                 inputs_embeds,
                 next_prediction,
