@@ -226,8 +226,8 @@ def get_latent_cot_grpo_dataset(
 ):
     def preprocess_fn(batch):
         question_ids = tokenizer.encode(batch['question'], return_tensors='pt', add_special_tokens=False)[0]
-        reasoning_ids = tokenizer.encode(batch['question'], return_tensors='pt', add_special_tokens=False)[0]
-        answer_ids = tokenizer.encode(batch['question'], return_tensors='pt', add_special_tokens=False)[0]
+        reasoning_ids = tokenizer.encode(batch['reasoning'], return_tensors='pt', add_special_tokens=False)[0]
+        answer_ids = tokenizer.encode(batch['answer'], return_tensors='pt', add_special_tokens=False)[0]
 
         return {
             'question_ids': question_ids,
