@@ -8,7 +8,7 @@ import torch
 gsm8k_train_path = "data/gsm8k/train.jsonl"
 gsm8k_test_path = "data/gsm8k/test.jsonl"
 
-def get_gsm8k_dataset(num_train: Optional[int] = None, num_proc: Optional[int] = None) -> Union[DatasetDict, Dataset]:
+def get_gsm8k_dataset(streaming: bool) -> Union[DatasetDict, Dataset]:
     def preprocess_fn(example):
         question = example['question']
         full_answer = example['answer']
@@ -28,7 +28,7 @@ def get_gsm8k_dataset(num_train: Optional[int] = None, num_proc: Optional[int] =
             "train": gsm8k_train_path,
             "test": gsm8k_test_path,
         },
-        streaming=True
+        streaming=streaming
     )
 
     ds = ds.map(preprocess_fn, batched=False, remove_columns=['question', 'answer'])

@@ -219,3 +219,23 @@ def collate_fn(batch):
         'labels_ids': labels_ids,
         'labels_embeds_mask': labels_embeds_mask
     }
+
+def get_latent_cot_grpo_dataset(
+        dataset: Union[DatasetDict, Dataset],
+        tokenizer: LatentTokenizer,
+):
+    def preprocess_fn(batch):
+        question_ids = tokenizer.encode(batch['question'], return_tensors='pt', add_special_tokens=False)[0]
+        reasoning_ids = tokenizer.encode(batch['question'], return_tensors='pt', add_special_tokens=False)[0]
+        answer_ids = tokenizer.encode(batch['question'], return_tensors='pt', add_special_tokens=False)[0]
+
+        return {
+            'question_ids': question_ids,
+            'reasoning_ids': reasoning_ids,
+            'answer_ids': answer_ids,
+        }
+
+    dataset = dataset.map(preprocess_fn, batched=False, remove_columns=['question', 'reasoning', 'answer'])
+    dataset.set_format('pt')
+
+    return dataset
