@@ -81,7 +81,7 @@ model_id = args.model
 tokenizer = LatentTokenizer(args.tokenizer)
 
 if args.dataset == "4x4":
-    base_ds = get_4x4_dataset(num_train=args.num_train)
+    base_ds = get_4x4_dataset(streaming=False)
 elif args.dataset == "gsm8k":
     base_ds = get_gsm8k_dataset(streaming=False)
 else:

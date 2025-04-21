@@ -10,7 +10,7 @@ TEST_4x4_PATH = "data/multiplication/4x4/valid.txt"
 TRAIN_5x5_PATH = "data/multiplication/5x5/train.txt"
 TEST_5x5_PATH = "data/multiplication/5x5/valid.txt"
 
-def get_4x4_dataset(num_train: Optional[int] = None, num_proc: Optional[int] = None) -> Union[DatasetDict, Dataset]:
+def get_4x4_dataset(streaming: bool) -> Union[DatasetDict, Dataset]:
     def preprocess_fn(example):
         text = example['text']
 
@@ -31,7 +31,7 @@ def get_4x4_dataset(num_train: Optional[int] = None, num_proc: Optional[int] = N
             "train": TRAIN_4x4_PATH,
             "test": TEST_4x4_PATH,
         },
-        streaming=True
+        streaming=streaming
     )
 
     ds = ds.map(preprocess_fn, batched=False, remove_columns=['text'])
