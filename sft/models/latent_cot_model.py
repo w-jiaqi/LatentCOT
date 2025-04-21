@@ -212,8 +212,8 @@ class LatentCOTModel(nn.Module):
 
         # scale them accordingly because answer loss will be smaller
         # than reasoning loss
-        reasoning_loss = reasoning_loss * (reasoning_embeds.shape[0] / answer_embeds.shape[0])
-        answer_loss = answer_loss * (answer_embeds.shape[0] / reasoning_embeds.shape[0])
+        # reasoning_loss = reasoning_loss * (reasoning_embeds.shape[0] / answer_embeds.shape[0])
+        # answer_loss = answer_loss * (answer_embeds.shape[0] / reasoning_embeds.shape[0])
         loss = reasoning_loss + answer_loss
 
         return loss

@@ -46,6 +46,9 @@ parser.add_argument(
 	"--batch_num", type=int, default=32
 )
 parser.add_argument(
+	"--max_new_latents", type=int
+)
+parser.add_argument(
 	"--checkpoints_name", type=str, default=utils.get_cur_time_string(), help="Name of checkpoints folder underneath checkpoints_dir"
 )
 
@@ -105,27 +108,31 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path):
 	for epoch in range(args.epochs):
 		progress_bar = tqdm(dataloader, desc=f"Epoch: {epoch}")
 
-		for batch in progress_bar:
-			batch = {k: v.to(device) for k, v in batch.items()}
+		batch_loss = 0
 
-			token_loss_value = None
+		for idx, batch in enumerate(progress_bar):
+			batch = {k: v.to(device) for k, v in batch.items()}
 
 			token_loss = model.grpo_forward(
 				question_ids = batch['question_ids'],
 				reasoning_ids = batch['reasoning_ids'],
 				answer_ids = batch['answer_ids'],
-				max_new_latents = 20,
+				max_new_latents = args.max_new_latents,
 			)
 
-			token_optimizer.zero_grad()
+			batch_loss += token_loss
 
-			token_loss.backward()
-			token_optimizer.step()
+			if idx % args.batch_num == 0:
+				batch_loss /= args.batch_num 
 
-			token_loss_value = token_loss.item()
+				progress_bar.set_postfix({'loss': batch_loss.item()})
+				run.log({'loss': batch_loss.item()})
+				
+				token_optimizer.zero_grad()
+				batch_loss.backward()
+				token_optimizer.step()
 
-			progress_bar.set_postfix({'loss': token_loss_value})
-			run.log({'loss': token_loss_value})
+				batch_loss = 0
 
 		print(f"Finished Epoch ({epoch})")
 
