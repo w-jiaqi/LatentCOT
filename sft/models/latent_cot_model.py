@@ -23,11 +23,6 @@ class LatentCOTModel(nn.Module):
         self.embedding = self.model.get_input_embeddings()
         self.output_embedding = self.model.get_output_embeddings()
 
-        self.latent_embedding = nn.Embedding(
-            len(tokenizer),
-            self.embedding.embedding_dim,
-        )
-
         self.latent_embedding = copy.deepcopy(self.embedding)
         self.latent_output_embedding = copy.deepcopy(self.output_embedding)
 
@@ -99,21 +94,21 @@ class LatentCOTModel(nn.Module):
 
     def grpo_forward(
             self,
-            question_ids: torch.Tensor,             # (batch, q_seq)
-            question_attention_mask: torch.Tensor,  # (batch, q_seq)
-            reasoning_ids: torch.Tensor,            # (batch, r_seq)
-            reasoning_attention_mask: torch.Tensor, # (batch, r_seq)
-            answer_ids: torch.Tensor,               # (batch, a_seq)
-            answer_attention_mask: torch.Tensor,    # (batch, a_seq)
+            question_ids: torch.Tensor,
+            question_attention_mask: torch.Tensor,
+            reasoning_ids: torch.Tensor,
+            reasoning_attention_mask: torch.Tensor,
+            answer_ids: torch.Tensor,
+            answer_attention_mask: torch.Tensor,
             max_new_latents: int,
     ) -> torch.Tensor:
+        # need to still add labels
         batch_size = question_ids.size(0)
 
         question_embeds = self.embedding(question_ids)   # (batch, q_seq, dim)
         reasoning_embeds = self.embedding(reasoning_ids) # (batch, r_seq, dim)
         answer_embeds = self.embedding(answer_ids)       # (batch, a_seq, dim)
 
-        # Prepare special token ids and embeddings, expand for batch
         def expand_token(token_id):
             return self.embedding(
                 torch.full((batch_size, 1), token_id, dtype=question_ids.dtype, device=question_ids.device)
@@ -121,8 +116,10 @@ class LatentCOTModel(nn.Module):
 
         bos_col_embed = expand_token(self.tokenizer.bos_token_id)
         eos_col_embed = expand_token(self.tokenizer.eos_token_id)
+        
         start_latent_col_embed = expand_token(self.tokenizer.start_latent_id)
         end_latent_col_embed = expand_token(self.tokenizer.end_latent_id)
+
         start_cot_col_embed = expand_token(self.tokenizer.start_cot_id)
         end_cot_col_embed = expand_token(self.tokenizer.end_cot_id)
 
@@ -142,26 +139,22 @@ class LatentCOTModel(nn.Module):
         ), dim=1) # (batch, seq)
 
         # finished = torch.zeros(batch_size, dtype=torch.bool, device=question_ids.device)
-        # kv_cache = None
+        kv_cache = None
 
         for _ in range(max_new_latents):
-            # if kv_cache is None:
-            #     model_inputs = inputs_embeds
-            # else:
-            #     model_inputs = inputs_embeds[:, -1:, :]
             outputs = self.model(
-                inputs_embeds=inputs_embeds,
-                attention_mask=attention_mask,
+                inputs_embeds=inputs_embeds if kv_cache is None else inputs_embeds[:, -1:, :],
+                attention_mask=attention_mask, # i have absolutely no clue why we can't slice the attention mask here 
                 output_hidden_states=True,
                 use_cache=True,
-                # past_key_values=kv_cache
+                past_key_values=kv_cache
             )
 
-            # kv_cache = outputs.past_key_values
+            kv_cache = outputs.past_key_values
 
             hidden_layer = outputs.hidden_states[-1]  # (batch, seq, dim)
             next_prediction = torch.nn.functional.softmax(
-                self.latent_output_embedding(hidden_layer[:, -1]), dim=-1
+                self.latent_output_embedding(hidden_layer[:, -1, :]), dim=-1
             ) @ self.latent_embedding.weight  # (batch, dim)
             next_prediction = next_prediction.unsqueeze(1)  # (batch, 1, dim)
 
@@ -181,7 +174,7 @@ class LatentCOTModel(nn.Module):
             inputs_embeds = torch.cat((inputs_embeds, next_prediction), dim=1)
             attention_mask = torch.cat((
                 attention_mask,
-                torch.zeros((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device)
+                torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device)
             ), dim=1)
 
             # # If all finished, break

@@ -100,7 +100,8 @@ ds = get_latent_cot_grpo_dataset(
 def train_model(model: LatentCOTModel, dataset, checkpoints_path):
 	token_optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
-	dataloader = DataLoader(dataset['train'], batch_size=args.batch_num, collate_fn=grpo_collate_fn)
+	# dataloader = DataLoader(dataset['train'], batch_size=args.batch_num, collate_fn=grpo_collate_fn)
+	dataloader = DataLoader(dataset['train'], batch_size=args.batch_num)
 	model = model.to(device)
 
 	for epoch in range(args.epochs):
@@ -124,10 +125,10 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path):
 
 		print(f"Finished Epoch ({epoch})")
 
-		model.save_pretrained(os.path.join(checkpoints_path, f"epoch_{epoch}"))
+		torch.save(model.state_dict(), os.path.join(checkpoints_path, f"epoch_{epoch}"))
 		tokenizer.save_pretrained(os.path.join(checkpoints_path, f"epoch_{epoch}"))
 
-	model.save_pretrained(checkpoints_path)
+	torch.save(model.state_dict(), os.path.join(checkpoints_path, "final"))
 
 
 model = LatentCOTModel(model_id, tokenizer)
@@ -137,8 +138,8 @@ print("Training model")
 import signal
 
 def handle_sig(sig, frame):
-	print(f"Saving model @ {model_checkpoints_path}")
-	model.save_pretrained(model_checkpoints_path)
+	print(f"Saving model @ {os.path.join(model_checkpoints_path, 'final')}")
+	torch.save(model.state_dict(), os.path.join(model_checkpoints_path, 'final'))
 
 	print(f"Saving tokenizer @ {tokenizer_checkpoints_path}")
 	tokenizer.save_pretrained(tokenizer_checkpoints_path)
