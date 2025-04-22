@@ -225,17 +225,83 @@ def get_latent_cot_grpo_dataset(
         tokenizer: LatentTokenizer,
 ):
     def preprocess_fn(batch):
-        question_ids = tokenizer.encode(batch['question'], return_tensors='pt', add_special_tokens=False)[0]
-        reasoning_ids = tokenizer.encode(batch['reasoning'], return_tensors='pt', add_special_tokens=False)[0]
-        answer_ids = tokenizer.encode(batch['answer'], return_tensors='pt', add_special_tokens=False)[0]
+        question_tokens = tokenizer(batch['question'], return_tensors='pt', add_special_tokens=False)
+        reasoning_tokens = tokenizer(batch['reasoning'], return_tensors='pt', add_special_tokens=False)
+        answer_tokens = tokenizer(batch['answer'], return_tensors='pt', add_special_tokens=False)
 
         return {
-            'question_ids': question_ids,
-            'reasoning_ids': reasoning_ids,
-            'answer_ids': answer_ids,
+            'question_ids': question_tokens['input_ids'],
+            'question_attention_mask': question_tokens['attention_mask'],
+
+            'reasoning_ids': reasoning_tokens['input_ids'],
+            'reasoning_attention_mask': reasoning_tokens['attention_mask'],
+
+            'answer_ids': answer_tokens['input_ids'],
+            'answer_attention_mask': answer_tokens['attention_mask'],
         }
 
-    dataset = dataset.map(preprocess_fn, batched=False, remove_columns=['question', 'reasoning', 'answer'])
+    dataset = dataset.map(preprocess_fn, batched=True, remove_columns=['question', 'reasoning', 'answer'])
     dataset.set_format('pt')
 
     return dataset
+
+def grpo_collate_fn(batch):
+    max_question_len = max(example['question_ids'].shape[0] for example in batch)
+    max_reasoning_len = max(example['reasoning_ids'].shape[0] for example in batch)
+    max_answer_len = max(example['answer_ids'].shape[0] for example in batch)
+
+    for example in batch:
+        question_len = example['question_ids'].shape[0]
+        reasoning_len = example['reasoning_ids'].shape[0]
+        answer_len = example['answer_ids'].shape[0]
+
+        example['question_ids'] = torch.cat((
+            example['question_ids'], 
+            torch.zeros((max_question_len - question_len, ), dtype=example['question_ids'].dtype)
+        ))
+
+        example['question_attention_mask'] = torch.cat((
+            example['question_attention_mask'],
+            torch.zeros((max_question_len - question_len, ), dtype=example['question_attention_mask'].dtype)
+        ))
+
+        example['reasoning_ids'] = torch.cat((
+            example['reasoning_ids'],
+            torch.zeros((max_reasoning_len - reasoning_len, ), dtype=example['reasoning_ids'].dtype)
+        ))
+
+        example['reasoning_attention_mask'] = torch.cat((
+            example['reasoning_attention_mask'],
+            torch.zeros((max_reasoning_len - reasoning_len, ), dtype=example['reasoning_attention_mask'].dtype)
+        ))
+
+        example['answer_ids'] = torch.cat((
+            example['answer_ids'],
+            torch.zeros((max_answer_len - answer_len, ), dtype=example['answer_ids'].dtype)
+        ))
+
+        example['answer_attention_mask'] = torch.cat((
+            example['answer_attention_mask'],
+            torch.zeros((max_answer_len - answer_len, ), dtype=example['answer_attention_mask'].dtype)
+        ))
+
+    question_ids = torch.stack([example['question_ids'] for example in batch])
+    question_attention_mask = torch.stack([example['question_attention_mask'] for example in batch])
+
+    reasoning_ids = torch.stack([example['reasoning_ids'] for example in batch])
+    reasoning_attention_mask = torch.stack([example['reasoning_attention_mask'] for example in batch])
+
+    answer_ids = torch.stack([example['answer_ids'] for example in batch])
+    answer_attention_mask = torch.stack([example['answer_attention_mask'] for example in batch])
+
+    return {
+        'question_ids': question_ids,
+        'question_attention_mask': question_attention_mask,
+
+        'reasoning_ids': reasoning_ids,
+        'reasoning_attention_mask': reasoning_attention_mask,
+
+        'answer_ids': answer_ids,
+        'answer_attention_mask': answer_attention_mask,
+    }
+

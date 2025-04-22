@@ -90,71 +90,92 @@ class LatentCOTModel(nn.Module):
 
     def grpo_forward(
             self,
-            question_ids: str,
-            reasoning_ids: str,
-            answer_ids: str,
+            question_ids: torch.Tensor,             # (batch, q_seq)
+            question_attention_mask: torch.Tensor,  # (batch, q_seq)
+            reasoning_ids: torch.Tensor,            # (batch, r_seq)
+            reasoning_attention_mask: torch.Tensor, # (batch, r_seq)
+            answer_ids: torch.Tensor,               # (batch, a_seq)
+            answer_attention_mask: torch.Tensor,    # (batch, a_seq)
             max_new_latents: int,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # question_ids: (batch_size, seq_len)
-        # reasoning_ids: (batch_size, seq_len)
-        # answer_ids: (batch_size, seq_len)
+    ) -> torch.Tensor:
+        batch_size = question_ids.size(0)
 
-        question_ids = question_ids[0] # (seq_len)
-        reasoning_ids = reasoning_ids[0]
-        answer_ids = answer_ids[0]
+        question_embeds = self.embedding(question_ids)   # (batch, q_seq, dim)
+        reasoning_embeds = self.embedding(reasoning_ids) # (batch, r_seq, dim)
+        answer_embeds = self.embedding(answer_ids)       # (batch, a_seq, dim)
 
-        question_embeds = self.embedding(question_ids) # (seq_len, latent_dim)
-        reasoning_embeds = self.embedding(reasoning_ids)
-        answer_embeds = self.embedding(answer_ids)
+        # Prepare special token ids and embeddings, expand for batch
+        def expand_token(token_id):
+            return self.embedding(
+                torch.full((batch_size, 1), token_id, dtype=question_ids.dtype, device=question_ids.device)
+            ) # (batch, 1, dim)
 
-        torch.set_default_device('cuda')
+        bos_col_embed = expand_token(self.tokenizer.bos_token_id)
+        eos_col_embed = expand_token(self.tokenizer.eos_token_id)
+        start_latent_col_embed = expand_token(self.tokenizer.start_latent_id)
+        end_latent_col_embed = expand_token(self.tokenizer.end_latent_id)
+        start_cot_col_embed = expand_token(self.tokenizer.start_cot_id)
+        end_cot_col_embed = expand_token(self.tokenizer.end_cot_id)
 
-        bos_col = torch.tensor(self.tokenizer.bos_token_id).unsqueeze(0) # (1, )
-        bos_col_embed = self.embedding(bos_col)
-
-        eos_col = torch.tensor(self.tokenizer.eos_token_id).unsqueeze(0)
-        eos_col_embed = self.embedding(eos_col)
-
-        start_latent_col = torch.tensor(self.tokenizer.start_latent_id).unsqueeze(0)
-        start_latent_col_embed = self.embedding(start_latent_col)
-
-        end_latent_col = torch.tensor(self.tokenizer.end_latent_id).unsqueeze(0)
-        end_latent_col_embed = self.embedding(end_latent_col)
-
-        start_cot_col = torch.tensor(self.tokenizer.start_cot_id).unsqueeze(0)
-        start_cot_col_embed = self.embedding(start_cot_col)
-
-        end_cot_col = torch.tensor(self.tokenizer.end_cot_id).unsqueeze(0)
-        end_cot_col_embed = self.embedding(end_cot_col)
-
+        # Build initial input embeds: [BOS] + question + [START_LATENT]
         inputs_embeds = torch.cat((
             bos_col_embed,
             question_embeds,
             start_latent_col_embed,
-        ), dim=0) # (seq_len, latent_dim)
+        ), dim=1) # (batch, seq, dim)
+
+        # Build initial attention mask using question_attention_mask
+        # [BOS] (1), question_attention_mask, [START_LATENT] (1)
+        attention_mask = torch.cat((
+            torch.ones((batch_size, 1), dtype=question_attention_mask.dtype, device=question_attention_mask.device), # bos
+            question_attention_mask,
+            torch.ones((batch_size, 1), dtype=question_attention_mask.dtype, device=question_attention_mask.device), # start_latent
+        ), dim=1) # (batch, seq)
+
+        # finished = torch.zeros(batch_size, dtype=torch.bool, device=question_ids.device)
+        # kv_cache = None
 
         for _ in range(max_new_latents):
-            batched_inputs_embeds = inputs_embeds.unsqueeze(0)
-            attention_mask = torch.ones(batched_inputs_embeds.shape[:-1])
-
+            # Only update unfinished elements, keep finished ones padded
             outputs = self.model(
-                inputs_embeds=batched_inputs_embeds,
+                inputs_embeds=inputs_embeds,
                 attention_mask=attention_mask,
-                output_hidden_states=True
+                output_hidden_states=True,
+                use_cache=True,
+                # past_key_values=kv_cache
             )
+            # kv_cache = outputs.past_key_values
 
-            hidden_layer = outputs.hidden_states[-1] 
-            next_prediction = torch.nn.functional.softmax(self.output_embedding(hidden_layer[0][-1]), dim=0) @ self.embedding.weight
-            next_prediction = next_prediction.unsqueeze(0)
+            hidden_layer = outputs.hidden_states[-1]  # (batch, seq, dim)
+            next_prediction = torch.nn.functional.softmax(
+                self.output_embedding(hidden_layer[:, -1]), dim=-1
+            ) @ self.embedding.weight  # (batch, dim)
+            next_prediction = next_prediction.unsqueeze(1)  # (batch, 1, dim)
 
-            if (torch.nn.functional.mse_loss(end_latent_col_embed, next_prediction, reduction="sum") < 1e-3).all():
-                break
+            # # Check for end_latent token for each batch element
+            # mse = torch.nn.functional.mse_loss(
+            #     end_latent_col_embed, next_prediction, reduction="none"
+            # ).sum(dim=-1).squeeze(-1)  # (batch, 1) -> (batch,)
+            # newly_finished = (mse < 1e-3) & (~finished)
+            # finished = finished | newly_finished
 
-            inputs_embeds = torch.cat((
-                inputs_embeds,
-                next_prediction,
-            ), dim=0)
+            # # For finished elements, pad with zeros; for unfinished, use next_prediction
+            # pad_latent = torch.zeros_like(next_prediction)
+            # next_prediction = torch.where(
+            #     finished.view(-1, 1, 1), pad_latent, next_prediction
+            # )
 
+            inputs_embeds = torch.cat((inputs_embeds, next_prediction), dim=1)
+            attention_mask = torch.cat((
+                attention_mask,
+                torch.zeros((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device)
+            ), dim=1)
+
+            # # If all finished, break
+            # if finished.all():
+            #     break
+
+        # Build reasoning and answer input embeds
         reasoning_inputs_embeds = torch.cat((
             inputs_embeds,
             end_latent_col_embed,
@@ -162,37 +183,54 @@ class LatentCOTModel(nn.Module):
             reasoning_embeds,
             end_cot_col_embed,
             eos_col_embed,
-        )).unsqueeze(0) # (batch, seq_len, latent_dim)
+        ), dim=1) # (batch, seq, dim)
+
+        reasoning_attention_mask = torch.cat((
+            attention_mask,
+            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device), # end_latent
+            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device), # start_cot
+            reasoning_attention_mask,
+            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device), # end_cot
+            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device), # eos
+        ), dim=1)
 
         answer_inputs_embeds = torch.cat((
             inputs_embeds,
             end_latent_col_embed,
             answer_embeds,
             eos_col_embed,
-        )).unsqueeze(0) # (batch, seq_len, latent_dim)
+        ), dim=1) # (batch, seq, dim)
 
-        reasoning_attention_mask = torch.ones(inputs_embeds.shape[:-1])
-        answer_attention_mask = torch.ones(answer_inputs_embeds.shape[:-1])
+        answer_attention_mask = torch.cat((
+            attention_mask,
+            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device), # end_latent
+            answer_attention_mask,
+            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device), # eos
+        ), dim=1)
+
+        # Build labels for reasoning and answer
+        # -100 for non-label positions, then reasoning_ids, end_latent, start_cot
+        reasoning_label_prefix_len = reasoning_inputs_embeds.shape[1] - (reasoning_embeds.shape[1] + 2)
+        answer_label_prefix_len = answer_inputs_embeds.shape[1] - (answer_embeds.shape[1] + 1)
 
         reasoning_labels = torch.cat((
-            torch.full((reasoning_inputs_embeds.shape[1] - (reasoning_embeds.shape[0] + 2),), -100),
+            torch.full((batch_size, reasoning_label_prefix_len), -100, dtype=reasoning_ids.dtype, device=reasoning_ids.device),
             reasoning_ids,
-            end_cot_col,
-            eos_col,
-        ), dim=0).unsqueeze(0)
+            torch.full((batch_size, 1), self.tokenizer.end_cot_id, dtype=reasoning_ids.dtype, device=reasoning_ids.device),
+            torch.full((batch_size, 1), self.tokenizer.eos_token_id, dtype=reasoning_ids.dtype, device=reasoning_ids.device),
+        ), dim=1)
 
         answer_labels = torch.cat((
-            torch.full((answer_inputs_embeds.shape[1] - (answer_embeds.shape[0] + 1),), -100),
+            torch.full((batch_size, answer_label_prefix_len), -100, dtype=answer_ids.dtype, device=answer_ids.device),
             answer_ids,
-            eos_col,
-        ), dim=0).unsqueeze(0)
+            torch.full((batch_size, 1), self.tokenizer.eos_token_id, dtype=answer_ids.dtype, device=answer_ids.device),
+        ), dim=1)
 
-        assert reasoning_labels.shape == reasoning_inputs_embeds.shape[:-1], (
-            f"Mismatch in shapes: {reasoning_labels.shape}, {reasoning_inputs_embeds.shape[:-1]}"
+        assert reasoning_labels.shape == reasoning_inputs_embeds.shape[:2], (
+            f"Mismatch in shapes: {reasoning_labels.shape}, {reasoning_inputs_embeds.shape[:2]}"
         )
-
-        assert answer_labels.shape == answer_inputs_embeds.shape[:-1], (
-            f"Mismatch in shapes: {answer_labels.shape}, {answer_inputs_embeds.shape[:-1]}"
+        assert answer_labels.shape == answer_inputs_embeds.shape[:2], (
+            f"Mismatch in shapes: {answer_labels.shape}, {answer_inputs_embeds.shape[:2]}"
         )
 
         reasoning_outputs = self.model(
@@ -210,10 +248,6 @@ class LatentCOTModel(nn.Module):
         reasoning_loss = reasoning_outputs.loss
         answer_loss = answer_outputs.loss
 
-        # scale them accordingly because answer loss will be smaller
-        # than reasoning loss
-        # reasoning_loss = reasoning_loss * (reasoning_embeds.shape[0] / answer_embeds.shape[0])
-        # answer_loss = answer_loss * (answer_embeds.shape[0] / reasoning_embeds.shape[0])
         loss = reasoning_loss + answer_loss
 
         return loss

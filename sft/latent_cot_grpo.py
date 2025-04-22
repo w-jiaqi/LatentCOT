@@ -5,10 +5,8 @@ import torch
 from torch.utils.data import DataLoader
 import argparse
 from utils import utils
-from data.dataset import get_latent_cot_grpo_dataset, get_latent_cot_sft_dataset, collate_fn
-from sft.models.text_2_latent import Text2Latent
-from sft.models.latent_2_text import Latent2Text
-from sft.models.latent_cot_model import LatentCOTModel, LossType
+from data.dataset import get_latent_cot_grpo_dataset, grpo_collate_fn
+from sft.models.latent_cot_model import LatentCOTModel
 from sft.models.latent_tokenizer import LatentTokenizer
 from tqdm.auto import tqdm
 from data.multiplication_dataset import get_4x4_dataset
@@ -43,7 +41,7 @@ parser.add_argument(
     "--num_train", type=int, default=None, help="Number of training examples to use"
 )
 parser.add_argument(
-	"--batch_num", type=int, default=32
+	"--batch_num", type=int, default=8
 )
 parser.add_argument(
 	"--max_new_latents", type=int
@@ -102,37 +100,27 @@ ds = get_latent_cot_grpo_dataset(
 def train_model(model: LatentCOTModel, dataset, checkpoints_path):
 	token_optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
-	dataloader = DataLoader(dataset['train'], batch_size=1)
+	dataloader = DataLoader(dataset['train'], batch_size=args.batch_num, collate_fn=grpo_collate_fn)
 	model = model.to(device)
 
 	for epoch in range(args.epochs):
 		progress_bar = tqdm(dataloader, desc=f"Epoch: {epoch}")
 
-		batch_loss = 0
-
-		for idx, batch in enumerate(progress_bar):
+		for batch in progress_bar:
 			batch = {k: v.to(device) for k, v in batch.items()}
 
-			token_loss = model.grpo_forward(
-				question_ids = batch['question_ids'],
-				reasoning_ids = batch['reasoning_ids'],
-				answer_ids = batch['answer_ids'],
-				max_new_latents = args.max_new_latents,
+			loss = model.grpo_forward(
+				**batch,
+				max_new_latents=args.max_new_latents,
 			)
 
-			batch_loss += token_loss
+			progress_bar.set_postfix({'loss': loss.item()})
+			run.log({'loss': loss.item()})
+			
+			token_optimizer.zero_grad()
+			loss.backward()
 
-			if idx % args.batch_num == 0:
-				batch_loss /= args.batch_num 
-
-				progress_bar.set_postfix({'loss': batch_loss.item()})
-				run.log({'loss': batch_loss.item()})
-				
-				token_optimizer.zero_grad()
-				batch_loss.backward()
-				token_optimizer.step()
-
-				batch_loss = 0
+			token_optimizer.step()
 
 		print(f"Finished Epoch ({epoch})")
 

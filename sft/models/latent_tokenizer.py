@@ -44,4 +44,7 @@ class LatentTokenizer():
 
 	def __len__(self):
 		return len(self._tokenizer)
+
+	def __call__(self, *args, **kwds):
+		return self._tokenizer(*args, **kwds)
 		
