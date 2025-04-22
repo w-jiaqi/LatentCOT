@@ -1,3 +1,4 @@
+import copy
 from typing import List, Tuple
 import torch
 from torch import nn
@@ -21,6 +22,14 @@ class LatentCOTModel(nn.Module):
         self.model.resize_token_embeddings(len(tokenizer))
         self.embedding = self.model.get_input_embeddings()
         self.output_embedding = self.model.get_output_embeddings()
+
+        self.latent_embedding = nn.Embedding(
+            len(tokenizer),
+            self.embedding.embedding_dim,
+        )
+
+        self.latent_embedding = copy.deepcopy(self.embedding)
+        self.latent_output_embedding = copy.deepcopy(self.output_embedding)
 
         if tie_weights:
             print("Tying model weights")
@@ -136,7 +145,10 @@ class LatentCOTModel(nn.Module):
         # kv_cache = None
 
         for _ in range(max_new_latents):
-            # Only update unfinished elements, keep finished ones padded
+            # if kv_cache is None:
+            #     model_inputs = inputs_embeds
+            # else:
+            #     model_inputs = inputs_embeds[:, -1:, :]
             outputs = self.model(
                 inputs_embeds=inputs_embeds,
                 attention_mask=attention_mask,
@@ -144,12 +156,13 @@ class LatentCOTModel(nn.Module):
                 use_cache=True,
                 # past_key_values=kv_cache
             )
+
             # kv_cache = outputs.past_key_values
 
             hidden_layer = outputs.hidden_states[-1]  # (batch, seq, dim)
             next_prediction = torch.nn.functional.softmax(
-                self.output_embedding(hidden_layer[:, -1]), dim=-1
-            ) @ self.embedding.weight  # (batch, dim)
+                self.latent_output_embedding(hidden_layer[:, -1]), dim=-1
+            ) @ self.latent_embedding.weight  # (batch, dim)
             next_prediction = next_prediction.unsqueeze(1)  # (batch, 1, dim)
 
             # # Check for end_latent token for each batch element
@@ -226,11 +239,19 @@ class LatentCOTModel(nn.Module):
             torch.full((batch_size, 1), self.tokenizer.eos_token_id, dtype=answer_ids.dtype, device=answer_ids.device),
         ), dim=1)
 
-        assert reasoning_labels.shape == reasoning_inputs_embeds.shape[:2], (
+        assert reasoning_labels.shape == reasoning_inputs_embeds.shape[:-1], (
             f"Mismatch in shapes: {reasoning_labels.shape}, {reasoning_inputs_embeds.shape[:2]}"
         )
-        assert answer_labels.shape == answer_inputs_embeds.shape[:2], (
+        assert answer_labels.shape == answer_inputs_embeds.shape[:-1], (
             f"Mismatch in shapes: {answer_labels.shape}, {answer_inputs_embeds.shape[:2]}"
+        )
+
+        assert reasoning_attention_mask.shape == reasoning_inputs_embeds.shape[:-1], (
+            f"Mismatch in shapes: {reasoning_attention_mask.shape}, {reasoning_inputs_embeds.shape[:2]}"
+        )
+
+        assert answer_attention_mask.shape == answer_inputs_embeds.shape[:-1], (
+            f"Mismatch in shapes: {answer_attention_mask.shape}, {answer_inputs_embeds.shape[:2]}"
         )
 
         reasoning_outputs = self.model(

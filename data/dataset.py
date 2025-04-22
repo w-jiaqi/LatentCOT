@@ -225,9 +225,9 @@ def get_latent_cot_grpo_dataset(
         tokenizer: LatentTokenizer,
 ):
     def preprocess_fn(batch):
-        question_tokens = tokenizer(batch['question'], return_tensors='pt', add_special_tokens=False)
-        reasoning_tokens = tokenizer(batch['reasoning'], return_tensors='pt', add_special_tokens=False)
-        answer_tokens = tokenizer(batch['answer'], return_tensors='pt', add_special_tokens=False)
+        question_tokens = tokenizer(batch['question'], add_special_tokens=False)
+        reasoning_tokens = tokenizer(batch['reasoning'],add_special_tokens=False)
+        answer_tokens = tokenizer(batch['answer'], add_special_tokens=False)
 
         return {
             'question_ids': question_tokens['input_ids'],
