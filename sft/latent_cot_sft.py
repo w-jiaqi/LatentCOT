@@ -9,7 +9,7 @@ from data.dataset import get_latent_cot_sft_dataset, collate_fn
 from sft.models.latent_cot_model import LatentCOTModel, LossType
 from sft.models.latent_tokenizer import LatentTokenizer
 from tqdm.auto import tqdm
-from data.multiplication_dataset import get_4x4_dataset
+from data.multiplication_dataset import get_4x4_dataset, get_5x5_dataset
 from data.gsm8k_dataset import get_gsm8k_dataset
 import wandb
 
@@ -65,9 +65,11 @@ tokenizer = LatentTokenizer(config.tokenizer)
 tokenizer.save_pretrained(tokenizer_checkpoints_path)
 
 if config.dataset == "4x4":
-    base_ds = get_4x4_dataset(num_train=config.num_train)
+    base_ds = get_4x4_dataset(streaming=False)
+elif config.dataset == "5x5":
+	base_ds = get_5x5_dataset(streaming=False)
 elif config.dataset == "gsm8k":
-    base_ds = get_gsm8k_dataset(num_train=config.num_train)
+    base_ds = get_gsm8k_dataset(streaming=False)
 else:
     raise ValueError(f"Unrecognized dataset: {config.dataset}")
 
