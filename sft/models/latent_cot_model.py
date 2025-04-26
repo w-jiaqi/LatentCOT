@@ -110,7 +110,7 @@ class LatentCOTModel(nn.Module):
     ) -> torch.Tensor:
         batch_size = question_ids.size(0)
 
-        base_inputs_embeds, base_attention_mask = self.generate_latents(
+        base_inputs_embeds, base_attention_mask = self._generate_latents(
             question_ids, question_attention_mask, max_new_latents
         )
 
@@ -209,7 +209,7 @@ class LatentCOTModel(nn.Module):
 
         batch_dim = inputs_ids.size(0)
 
-        inputs_embeds, attention_mask = self.generate_latents(
+        inputs_embeds, attention_mask = self._generate_latents(
             inputs_ids, input_attention_mask, max_new_latents, probe_latents=probe_latents
         )
 
@@ -233,7 +233,7 @@ class LatentCOTModel(nn.Module):
 
         return generated_text
 
-    def generate_latents(
+    def _generate_latents(
             self, 
             inputs_ids: torch.Tensor,  # (batch, seq_len)
             inputs_attention_mask: torch.Tensor,  # (batch, seq_len)
