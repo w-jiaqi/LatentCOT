@@ -80,8 +80,7 @@ ds = get_latent_cot_grpo_dataset(
 def train_model(model: LatentCOTModel, dataset, checkpoints_path):
         token_optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
 
-        # dataloader = DataLoader(dataset['train'], batch_size=config.batch_num, collate_fn=grpo_collate_fn)
-        dataloader = DataLoader(dataset['train'], batch_size=config.batch_num)
+        dataloader = DataLoader(dataset['train'], batch_size=config.batch_num, collate_fn=grpo_collate_fn)
         model = model.to(device)
 
         for epoch in range(config.epochs):

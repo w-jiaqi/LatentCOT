@@ -226,7 +226,7 @@ def get_latent_cot_grpo_dataset(
 ):
     def preprocess_fn(batch):
         question_tokens = tokenizer(batch['question'], add_special_tokens=False)
-        reasoning_tokens = tokenizer(batch['reasoning'],add_special_tokens=False)
+        reasoning_tokens = tokenizer(batch['reasoning'], add_special_tokens=False)
         answer_tokens = tokenizer(batch['answer'], add_special_tokens=False)
 
         return {
@@ -235,9 +235,11 @@ def get_latent_cot_grpo_dataset(
 
             'reasoning_ids': reasoning_tokens['input_ids'],
             'reasoning_attention_mask': reasoning_tokens['attention_mask'],
+            'reasoning_labels': reasoning_tokens['input_ids'],
 
             'answer_ids': answer_tokens['input_ids'],
             'answer_attention_mask': answer_tokens['attention_mask'],
+            'answer_labels': answer_tokens['input_ids'],
         }
 
     dataset = dataset.map(preprocess_fn, batched=True, remove_columns=['question', 'reasoning', 'answer'])
@@ -255,34 +257,42 @@ def grpo_collate_fn(batch):
         reasoning_len = example['reasoning_ids'].shape[0]
         answer_len = example['answer_ids'].shape[0]
 
+		# questions
         example['question_ids'] = torch.cat((
             example['question_ids'], 
-            torch.zeros((max_question_len - question_len, ), dtype=example['question_ids'].dtype)
+            torch.zeros((max_question_len - question_len,), dtype=example['question_ids'].dtype)
         ))
-
         example['question_attention_mask'] = torch.cat((
             example['question_attention_mask'],
-            torch.zeros((max_question_len - question_len, ), dtype=example['question_attention_mask'].dtype)
+            torch.zeros((max_question_len - question_len,), dtype=example['question_attention_mask'].dtype)
         ))
 
+        # reasoning
         example['reasoning_ids'] = torch.cat((
             example['reasoning_ids'],
-            torch.zeros((max_reasoning_len - reasoning_len, ), dtype=example['reasoning_ids'].dtype)
+            torch.zeros((max_reasoning_len - reasoning_len,), dtype=example['reasoning_ids'].dtype)
         ))
-
         example['reasoning_attention_mask'] = torch.cat((
             example['reasoning_attention_mask'],
-            torch.zeros((max_reasoning_len - reasoning_len, ), dtype=example['reasoning_attention_mask'].dtype)
+            torch.zeros((max_reasoning_len - reasoning_len,), dtype=example['reasoning_attention_mask'].dtype)
+        ))
+        example['reasoning_labels'] = torch.cat((
+            example['reasoning_labels'],
+            torch.full((max_reasoning_len - reasoning_len,), -100, dtype=example['reasoning_labels'].dtype)
         ))
 
+		# answers
         example['answer_ids'] = torch.cat((
             example['answer_ids'],
-            torch.zeros((max_answer_len - answer_len, ), dtype=example['answer_ids'].dtype)
+            torch.zeros((max_answer_len - answer_len,), dtype=example['answer_ids'].dtype)
         ))
-
         example['answer_attention_mask'] = torch.cat((
             example['answer_attention_mask'],
-            torch.zeros((max_answer_len - answer_len, ), dtype=example['answer_attention_mask'].dtype)
+            torch.zeros((max_answer_len - answer_len,), dtype=example['answer_attention_mask'].dtype)
+        ))
+        example['answer_labels'] = torch.cat((
+            example['answer_labels'],
+            torch.full((max_answer_len - answer_len,), -100, dtype=example['answer_labels'].dtype)
         ))
 
     question_ids = torch.stack([example['question_ids'] for example in batch])
@@ -290,9 +300,11 @@ def grpo_collate_fn(batch):
 
     reasoning_ids = torch.stack([example['reasoning_ids'] for example in batch])
     reasoning_attention_mask = torch.stack([example['reasoning_attention_mask'] for example in batch])
+    reasoning_labels = torch.stack([example['reasoning_labels'] for example in batch])
 
     answer_ids = torch.stack([example['answer_ids'] for example in batch])
     answer_attention_mask = torch.stack([example['answer_attention_mask'] for example in batch])
+    answer_labels = torch.stack([example['answer_labels'] for example in batch])
 
     return {
         'question_ids': question_ids,
@@ -300,8 +312,10 @@ def grpo_collate_fn(batch):
 
         'reasoning_ids': reasoning_ids,
         'reasoning_attention_mask': reasoning_attention_mask,
+        'reasoning_labels': reasoning_labels,
 
         'answer_ids': answer_ids,
         'answer_attention_mask': answer_attention_mask,
+        'answer_labels': answer_labels,
     }
 

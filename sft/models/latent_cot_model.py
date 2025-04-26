@@ -97,171 +97,85 @@ class LatentCOTModel(nn.Module):
             self,
             question_ids: torch.Tensor,
             question_attention_mask: torch.Tensor,
+
             reasoning_ids: torch.Tensor,
             reasoning_attention_mask: torch.Tensor,
+            reasoning_labels: torch.Tensor,  
+
             answer_ids: torch.Tensor,
             answer_attention_mask: torch.Tensor,
+            answer_labels: torch.Tensor,
+
             max_new_latents: int,
     ) -> torch.Tensor:
-        # need to still add labels
-
         batch_size = question_ids.size(0)
 
-        question_embeds = self.embedding(question_ids)   # (batch, q_seq, dim)
-        reasoning_embeds = self.embedding(reasoning_ids) # (batch, r_seq, dim)
-        answer_embeds = self.embedding(answer_ids)       # (batch, a_seq, dim)
+        base_inputs_embeds, base_attention_mask = self.generate_latents(
+            question_ids, question_attention_mask, max_new_latents
+        )
 
-        def expand_token(token_id):
-            return self.embedding(
-                torch.full((batch_size, 1), token_id, dtype=question_ids.dtype, device=question_ids.device)
-            ) # (batch, 1, dim)
+        start_cot_col_embed = self._expand_token(self.tokenizer.start_cot_id, batch_size)
+        end_cot_col_embed = self._expand_token(self.tokenizer.end_cot_id, batch_size)
+        eos_col_embed = self._expand_token(self.tokenizer.eos_token_id, batch_size)
 
-        bos_col_embed = expand_token(self.tokenizer.bos_token_id)
-        eos_col_embed = expand_token(self.tokenizer.eos_token_id)
-        
-        start_latent_col_embed = expand_token(self.tokenizer.start_latent_id)
-        end_latent_col_embed = expand_token(self.tokenizer.end_latent_id)
+        reasoning_embeds = self.embedding(reasoning_ids)
+        answer_embeds = self.embedding(answer_ids)
 
-        start_cot_col_embed = expand_token(self.tokenizer.start_cot_id)
-        end_cot_col_embed = expand_token(self.tokenizer.end_cot_id)
+        ones = torch.ones((batch_size, 1), dtype=base_inputs_embeds.dtype, device=base_attention_mask.device)
 
-        # Build initial input embeds: [BOS] + question + [START_LATENT]
-        inputs_embeds = torch.cat((
-            bos_col_embed,
-            question_embeds,
-            start_latent_col_embed,
-        ), dim=1) # (batch, seq, dim)
-
-        # Build initial attention mask using question_attention_mask
-        # [BOS] (1), question_attention_mask, [START_LATENT] (1)
-        attention_mask = torch.cat((
-            torch.ones((batch_size, 1), dtype=question_attention_mask.dtype, device=question_attention_mask.device), # bos
-            question_attention_mask,
-            torch.ones((batch_size, 1), dtype=question_attention_mask.dtype, device=question_attention_mask.device), # start_latent
-        ), dim=1) # (batch, seq)
-
-        # finished = torch.zeros(batch_size, dtype=torch.bool, device=question_ids.device)
-        kv_cache = None
-
-        for _ in range(max_new_latents):
-            outputs = self.model(
-                inputs_embeds=inputs_embeds if kv_cache is None else inputs_embeds[:, -1:, :],
-                attention_mask=attention_mask, # i have absolutely no clue why we can't slice the attention mask here 
-                output_hidden_states=True,
-                use_cache=True,
-                past_key_values=kv_cache
-            )
-
-            kv_cache = outputs.past_key_values
-
-            hidden_layer = outputs.hidden_states[-1]  # (batch, seq, dim)
-            next_prediction = torch.nn.functional.softmax(
-                self.latent_output_embedding(hidden_layer[:, -1, :]), dim=-1
-            ) @ self.latent_embedding.weight  # (batch, dim)
-            next_prediction = next_prediction.unsqueeze(1)  # (batch, 1, dim)
-
-            # # Check for end_latent token for each batch element
-            # mse = torch.nn.functional.mse_loss(
-            #     end_latent_col_embed, next_prediction, reduction="none"
-            # ).sum(dim=-1).squeeze(-1)  # (batch, 1) -> (batch,)
-            # newly_finished = (mse < 1e-3) & (~finished)
-            # finished = finished | newly_finished
-
-            # # For finished elements, pad with zeros; for unfinished, use next_prediction
-            # pad_latent = torch.zeros_like(next_prediction)
-            # next_prediction = torch.where(
-            #     finished.view(-1, 1, 1), pad_latent, next_prediction
-            # )
-
-            inputs_embeds = torch.cat((inputs_embeds, next_prediction), dim=1)
-            attention_mask = torch.cat((
-                attention_mask,
-                torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device)
-            ), dim=1)
-
-            # # If all finished, break
-            # if finished.all():
-            #     break
-
-        # # dropout
-        # random_mask = (torch.rand(batch_size, 1, device=question_attention_mask.device) > 0.9).float()
-        # random_mask = random_mask.expand_as(question_attention_mask)
-
-        # question_attention_mask = (question_attention_mask * random_mask).type_as(question_attention_mask)
-
-        # question_attention_mask = torch.cat((
-        #     torch.ones((batch_size, 1), dtype=question_attention_mask.dtype, device=question_attention_mask.device), # bos
-        #     question_attention_mask,
-        #     torch.ones((batch_size, 1), dtype=question_attention_mask.dtype, device=question_attention_mask.device), # start_latent
-        # ), dim=1) # (batch, seq)
-
-        # attention_mask[:, :question_attention_mask.size(1)] = question_attention_mask
-
-
-        # Build reasoning and answer input embeds
         reasoning_inputs_embeds = torch.cat((
-            inputs_embeds,
-            end_latent_col_embed,
+            base_inputs_embeds,
             start_cot_col_embed,
             reasoning_embeds,
             end_cot_col_embed,
             eos_col_embed,
-        ), dim=1) # (batch, seq, dim)
+        ), dim=1)
 
         reasoning_attention_mask = torch.cat((
-            attention_mask,
-            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device), # end_latent
-            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device), # start_cot
+            base_attention_mask,
+            ones,  # start_cot token
             reasoning_attention_mask,
-            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device), # end_cot
-            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device), # eos
+            ones,  # end_cot token
+            ones   # for eos token
+        ), dim=1)
+
+        reasoning_labels = torch.cat((
+            torch.full((batch_size, base_inputs_embeds.size(1)), -100, dtype=torch.long, device=reasoning_labels.device),
+            torch.full((batch_size, 1), self.tokenizer.start_cot_id, dtype=torch.long, device=reasoning_labels.device),
+            reasoning_labels,
+            torch.full((batch_size, 1), self.tokenizer.end_cot_id, dtype=torch.long, device=reasoning_labels.device),
+            torch.full((batch_size, 1), self.tokenizer.eos_token_id, dtype=torch.long, device=reasoning_labels.device),
         ), dim=1)
 
         answer_inputs_embeds = torch.cat((
-            inputs_embeds,
-            end_latent_col_embed,
+            base_inputs_embeds,
             answer_embeds,
             eos_col_embed,
-        ), dim=1) # (batch, seq, dim)
-
-        answer_attention_mask = torch.cat((
-            attention_mask,
-            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device), # end_latent
-            answer_attention_mask,
-            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device), # eos
         ), dim=1)
 
-        # Build labels for reasoning and answer
-        # -100 for non-label positions, then reasoning_ids, end_latent, start_cot
-        reasoning_label_prefix_len = reasoning_inputs_embeds.shape[1] - (reasoning_embeds.shape[1] + 2)
-        answer_label_prefix_len = answer_inputs_embeds.shape[1] - (answer_embeds.shape[1] + 1)
-
-        reasoning_labels = torch.cat((
-            torch.full((batch_size, reasoning_label_prefix_len), -100, dtype=reasoning_ids.dtype, device=reasoning_ids.device),
-            reasoning_ids,
-            torch.full((batch_size, 1), self.tokenizer.end_cot_id, dtype=reasoning_ids.dtype, device=reasoning_ids.device),
-            torch.full((batch_size, 1), self.tokenizer.eos_token_id, dtype=reasoning_ids.dtype, device=reasoning_ids.device),
+        answer_attention_mask = torch.cat((
+            base_attention_mask,
+            answer_attention_mask,
+            ones   # eos 
         ), dim=1)
 
         answer_labels = torch.cat((
-            torch.full((batch_size, answer_label_prefix_len), -100, dtype=answer_ids.dtype, device=answer_ids.device),
-            answer_ids,
-            torch.full((batch_size, 1), self.tokenizer.eos_token_id, dtype=answer_ids.dtype, device=answer_ids.device),
+            torch.full((batch_size, base_inputs_embeds.size(1)), -100, dtype=torch.long, device=answer_labels.device),
+            answer_labels,
+            torch.full((batch_size, 1), self.tokenizer.eos_token_id, dtype=torch.long, device=answer_labels.device),
         ), dim=1)
 
-        assert reasoning_labels.shape == reasoning_inputs_embeds.shape[:-1], (
-            f"Mismatch in shapes: {reasoning_labels.shape}, {reasoning_inputs_embeds.shape[:2]}"
+        assert reasoning_inputs_embeds.shape[:-1] == reasoning_attention_mask.shape, (
+            f"Mismatch in shapes: {reasoning_inputs_embeds.shape}, {reasoning_attention_mask.shape}"
         )
-        assert answer_labels.shape == answer_inputs_embeds.shape[:-1], (
-            f"Mismatch in shapes: {answer_labels.shape}, {answer_inputs_embeds.shape[:2]}"
+        assert answer_inputs_embeds.shape[:-1] == answer_attention_mask.shape, (
+            f"Mismatch in shapes: {answer_inputs_embeds.shape}, {answer_attention_mask.shape}"
         )
-
-        assert reasoning_attention_mask.shape == reasoning_inputs_embeds.shape[:-1], (
-            f"Mismatch in shapes: {reasoning_attention_mask.shape}, {reasoning_inputs_embeds.shape[:2]}"
+        assert reasoning_inputs_embeds.shape[:-1] == reasoning_labels.shape, (
+            f"Mismatch in shapes: {reasoning_inputs_embeds.shape}, {reasoning_labels.shape}"
         )
-
-        assert answer_attention_mask.shape == answer_inputs_embeds.shape[:-1], (
-            f"Mismatch in shapes: {answer_attention_mask.shape}, {answer_inputs_embeds.shape[:2]}"
+        assert answer_inputs_embeds.shape[:-1] == answer_labels.shape, (
+            f"Mismatch in shapes: {answer_inputs_embeds.shape}, {answer_labels.shape}"
         )
 
         reasoning_outputs = self.model(
@@ -276,100 +190,150 @@ class LatentCOTModel(nn.Module):
             labels=answer_labels
         )
 
-        reasoning_loss = reasoning_outputs.loss
-        answer_loss = answer_outputs.loss
-
-        answer_loss = 2 * answer_loss # just trying some scaling stuff
-
-        # reasoning_loss = reasoning_loss * (reasoning_embeds.size(1) / answer_embeds.size(1))
-        # answer_loss = answer_loss * (answer_embeds.size(1) / reasoning_embeds.size(1))
-
-        loss = reasoning_loss + answer_loss
+        loss = reasoning_outputs.loss + 2 * answer_outputs.loss
 
         return loss
 
     def generate(
             self, 
-            inputs_ids: torch.Tensor, # (seq_len,)
+            inputs_ids: torch.Tensor,  # (seq_len,) or (batch, seq_len)
+            input_attention_mask: torch.Tensor,  # (seq_len,) or (batch, seq_len)
             output_cot: bool,
             max_new_latents: int, 
             max_new_tokens: int, 
             probe_latents: bool = False
     ) -> str:
-        torch.set_default_device('cuda')
+        if inputs_ids.dim() == 1:
+            inputs_ids = inputs_ids.unsqueeze(0)
+            input_attention_mask = input_attention_mask.unsqueeze(0)
 
-        inputs_embeds = self.embedding(inputs_ids) # (seq_len, latent_dim)
+        batch_dim = inputs_ids.size(0)
 
-        bos_col = torch.tensor(self.tokenizer.bos_token_id).unsqueeze(0)
-        bos_col_embed = self.embedding(bos_col)
-
-        start_latent_col = torch.tensor(self.tokenizer.start_latent_id).unsqueeze(0)
-        start_latent_col_embed = self.embedding(start_latent_col)
-
-        end_latent_col = torch.tensor(self.tokenizer.end_latent_id).unsqueeze(0)
-        end_latent_col_embed = self.embedding(end_latent_col)
-
-        start_cot_col = torch.tensor(self.tokenizer.start_cot_id).unsqueeze(0)
-        start_cot_col_embed = self.embedding(start_cot_col)
-
-        inputs_embeds = torch.cat((
-            bos_col_embed,
-            inputs_embeds,
-            start_latent_col_embed,
-        ))
-
-        for _ in range(max_new_latents):
-            batched_inputs_embeds = inputs_embeds.unsqueeze(0)
-            attention_mask = torch.ones(batched_inputs_embeds.shape[:-1])
-
-            outputs = self.model(
-                inputs_embeds=batched_inputs_embeds,
-                attention_mask=attention_mask,
-                output_hidden_states=True
-            )
-            
-            if probe_latents:
-                sort = torch.sort(torch.softmax(outputs.logits[0][-1], dim=0), descending=True)
-                print(sort.values[:8])
-                print(repr(self.tokenizer.decode(sort.indices[:8])))
-                # print(self.tokenizer.decode(greedy_index))
-
-            hidden_layer = outputs.hidden_states[-1] 
-            next_prediction = torch.nn.functional.softmax(self.output_embedding(hidden_layer[0][-1]), dim=0) @ self.embedding.weight
-            next_prediction = next_prediction.unsqueeze(0)
-
-            if (torch.nn.functional.mse_loss(end_latent_col_embed, next_prediction, reduction="sum") < 1e-3).all():
-                break
-
-            inputs_embeds = torch.cat((
-                inputs_embeds,
-                next_prediction,
-            ), dim=0)
-
-
-        inputs_embeds = torch.cat((
-            inputs_embeds,
-            end_latent_col_embed,
-        )).unsqueeze(0) # adding batch dim
+        inputs_embeds, attention_mask = self.generate_latents(
+            inputs_ids, input_attention_mask, max_new_latents, probe_latents=probe_latents
+        )
 
         if output_cot:
-            inputs_embeds = torch.cat((
-                inputs_embeds,
-                start_cot_col_embed.unsqueeze(0),
-            ), dim=1) # along seq dim
+            start_cot_embed = self._expand_token(self.tokenizer.start_cot_id, batch_dim)
 
-        attention_mask = torch.ones(inputs_embeds.shape[:-1])
+            inputs_embeds = torch.cat((inputs_embeds, start_cot_embed), dim=1)
+
+            attention_mask = torch.cat((
+                attention_mask,
+                torch.ones((batch_dim, 1), dtype=attention_mask.dtype, device=attention_mask.device)
+            ), dim=1)
 
         output = self.model.generate(
             inputs_embeds=inputs_embeds,
             attention_mask=attention_mask,
             max_new_tokens=max_new_tokens
         )
-        
-        generated_text = self.tokenizer.decode(output[0]) # removing batch dim
+
+        generated_text = self.tokenizer.decode(output[0])
 
         return generated_text
 
-    def save_pretrained(self, path: str):
-        self.model.save_pretrained(path)
+    def generate_latents(
+            self, 
+            inputs_ids: torch.Tensor,  # (batch, seq_len)
+            inputs_attention_mask: torch.Tensor,  # (batch, seq_len)
+            max_new_latents: int,
+            probe_latents: bool = False
+    ) -> List[torch.Tensor]:
+        batch_size = inputs_ids.size(0)
 
+        inputs_embeds = self.embedding(inputs_ids)   # (batch, seq_len, dim)
+
+        bos_col_embed = self._expand_token(self.tokenizer.bos_token_id, batch_size)
+        
+        start_latent_col_embed = self._expand_token(self.tokenizer.start_latent_id, batch_size)
+        end_latent_col_embed = self._expand_token(self.tokenizer.end_latent_id, batch_size)
+
+        inputs_embeds = torch.cat((
+            bos_col_embed,
+            inputs_embeds,
+            start_latent_col_embed,
+        ), dim=1) # (batch, seq, dim)
+
+        attention_mask = torch.cat((
+            torch.ones((batch_size, 1), dtype=inputs_attention_mask.dtype, device=inputs_attention_mask.device), # bos
+            inputs_attention_mask,
+            torch.ones((batch_size, 1), dtype=inputs_attention_mask.dtype, device=inputs_attention_mask.device), # start_latent
+        ), dim=1) # (batch, seq)
+
+        finished = torch.zeros(batch_size, dtype=torch.bool, device=inputs_ids.device)
+        kv_cache = None
+
+        for _ in range(max_new_latents):
+            outputs = self.model(
+                inputs_embeds=inputs_embeds if kv_cache is None else inputs_embeds[:, -1:, :],
+                attention_mask=attention_mask, # i have absolutely no clue why we can't slice the attention mask here 
+                output_hidden_states=True,
+                use_cache=True,
+                past_key_values=kv_cache
+            )
+
+            kv_cache = outputs.past_key_values
+
+			# only will probe the first batch and the top 8 
+            if probe_latents:
+                logits = outputs.logits  # (batch, seq, vocab)
+                topk = torch.topk(torch.softmax(logits[0][-1], dim=0), k=8)
+                tokens = [self.tokenizer.decode([token]) for token in topk.indices.tolist()]
+                print("       ".join(tokens))
+
+            last_layer = outputs.hidden_states[-1]  # (batch, seq, dim)
+            next_prediction = torch.nn.functional.softmax(
+                self.latent_output_embedding(last_layer[:, -1, :]), dim=-1
+            ) @ self.latent_embedding.weight  # (batch, dim)
+            next_prediction = next_prediction.unsqueeze(1)  # (batch, 1, dim)
+
+            mse = torch.nn.functional.mse_loss(
+                end_latent_col_embed, next_prediction, reduction="none"
+            ).sum(dim=-1).squeeze(-1)  # (batch,)
+
+            finished =  finished | (mse < 1e-3) # we cannot do inplace modifications
+
+            pad_latent = torch.zeros_like(next_prediction)
+            pad_attention_mask = torch.zeros_like(attention_mask[:, -1:])
+
+            next_prediction = torch.where(
+                finished.view(-1, 1, 1), pad_latent, next_prediction
+            )
+            next_attention_mask = torch.where(
+                finished.view(-1, 1), pad_attention_mask, torch.ones_like(attention_mask[:, -1:])
+            )
+
+            inputs_embeds = torch.cat((
+                inputs_embeds, 
+                next_prediction
+            ), dim=1)
+
+            attention_mask = torch.cat((
+                attention_mask,
+                next_attention_mask
+            ), dim=1)
+
+            if finished.all():
+                break
+
+        inputs_embeds = torch.cat((
+            inputs_embeds,
+            end_latent_col_embed,
+        ), dim=1)
+
+        attention_mask = torch.cat((
+            attention_mask,
+            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device), # end_latent
+        ), dim=1)
+
+        assert inputs_embeds.shape[:-1] == attention_mask.shape, (
+            f"Mismatch in shapes: {inputs_embeds.shape}, {attention_mask.shape}"
+        )
+
+        return (inputs_embeds, attention_mask)
+        
+    def _expand_token(self, token_id: int, batch_size: int) -> torch.Tensor: # (batch, 1, dim)
+        return self.embedding(
+            torch.full((batch_size, 1), token_id, dtype=torch.long, device=self.embedding.weight.device)
+        )
