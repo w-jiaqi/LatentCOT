@@ -2,7 +2,7 @@ dataset: gsm8k
 model: meta-llama/Llama-3.2-1B
 tokenizer: meta-llama/Llama-3.2-1B
 epochs: 25
-checkpoints_dir: checkpoints/latent-cot-grpo
+checkpoints_dir: checkpoints
 batch_num: 8
 max_new_latents: 8
 checkpoints_name: gsm8k_cold_start_freeze_embeddings
