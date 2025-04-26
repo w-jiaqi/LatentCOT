@@ -10,10 +10,9 @@ import torch
 
 from sft.models.latent_cot_model import LatentCOTModel
 from sft.models.latent_tokenizer import LatentTokenizer
+from utils.utils import get_config
 
 import argparse
-import yaml
-from types import SimpleNamespace
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -27,8 +26,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-with open(args.config, "r") as f:
-	config = SimpleNamespace(**yaml.safe_load(f))
+config = get_config(args.config)
 
 tokenizer = LatentTokenizer(config.tokenizer)
 model = LatentCOTModel(config.base_model, tokenizer, freeze_embeddings=True).to(device)

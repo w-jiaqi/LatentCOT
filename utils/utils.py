@@ -4,6 +4,8 @@ import re
 import torch
 import signal
 import sys
+import yaml
+from types import SimpleNamespace
 
 def get_cur_time_string():
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -46,3 +48,17 @@ def torch_save_sigint(model, path):
         sys.exit(0)
 
     signal.signal(signal.SIGINT, handle_sig) 
+
+def hf_save_sigint(model, path):
+    def handle_sig(sig, frame):
+        model.save_pretrained(path)
+
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, handle_sig) 
+
+def get_config(config_path):
+    with open(config_path, "r") as f:
+        config = SimpleNamespace(**yaml.safe_load(f))
+
+    return config

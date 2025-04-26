@@ -11,9 +11,7 @@ from tqdm.auto import tqdm
 from data.multiplication_dataset import get_4x4_dataset, get_5x5_dataset
 from data.gsm8k_dataset import get_gsm8k_dataset
 import wandb
-from utils.utils import torch_save, torch_save_sigint
-import yaml
-from types import SimpleNamespace
+from utils.utils import torch_save, torch_save_sigint, get_config
 
 wandb.login()
 
@@ -28,10 +26,7 @@ parser.add_argument(
     "-c", "--config", type=str, required=True
 )
 
-args = parser.parse_args()
-
-with open(args.config, "r") as f:
-        config = SimpleNamespace(**yaml.safe_load(f))
+config = get_config(parser.parse_args().config)
 
 run = wandb.init(
         project="Latent COT GRPO (not really)",
@@ -60,7 +55,6 @@ print(f"Saving model @ {model_checkpoints_path}")
 print(f"Saving tokenizer @ {tokenizer_checkpoints_path}")
 
 tokenizer = LatentTokenizer(config.tokenizer)
-
 tokenizer.save_pretrained(tokenizer_checkpoints_path)
 
 if config.dataset == "4x4":

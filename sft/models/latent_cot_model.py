@@ -280,6 +280,7 @@ class LatentCOTModel(nn.Module):
                 logits = outputs.logits  # (batch, seq, vocab)
                 topk = torch.topk(torch.softmax(logits[0][-1], dim=0), k=8)
                 tokens = [self.tokenizer.decode([token]) for token in topk.indices.tolist()]
+
                 print("       ".join(tokens))
 
             last_layer = outputs.hidden_states[-1]  # (batch, seq, dim)
