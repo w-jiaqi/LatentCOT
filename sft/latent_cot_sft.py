@@ -122,7 +122,7 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path, latents_lr, to
 
 		utils.torch_save(model, os.path.join(checkpoints_path, f"epoch_{epoch}", "model.pth"))
 
-model = LatentCOTModel(config.model, tokenizer)
+model = LatentCOTModel(config.model, tokenizer, freeze_embeddings=True)
 
 ds = get_latent_cot_sft_dataset(
 	dataset=base_ds,
