@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=sft_latent_inference_4x4_dropout_high_adamw
+#SBATCH --job-name=4x4_cold_start
 #SBATCH --partition=gpu-l40s
 #SBATCH --account=ark
 #SBATCH --nodes=1
@@ -13,4 +13,4 @@
 
 cd /gscratch/ark/anjo0/LatentCOT
 source env/bin/activate
-python sft/latent_cot_grpo.py -d 4x4 --model checkpoints/latent-cot-sft/4x4/pool_8/model -t checkpoints/latent-cot-sft/4x4/pool_8/tokenizer --checkpoints_name pool_8_batched_dropout_high_adamw --max_new_latents 11 --batch_num 16
+python sft/latent_cot_grpo.py -d 4x4 --checkpoints_name cold_start --max_new_latents 8 --batch_num 16 --epochs 5
