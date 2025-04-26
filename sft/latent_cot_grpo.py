@@ -35,6 +35,7 @@ with open(args.config, "r") as f:
 
 run = wandb.init(
         project="Latent COT GRPO (not really)",
+        name=config.checkpoints_name,
         config=vars(config)
 )
 
