@@ -5,7 +5,7 @@ epochs: 25
 checkpoints_dir: checkpoints/latent-cot-grpo
 batch_num: 8
 max_new_latents: 8
-checkpoints_name: gsm8k_cold_start
+checkpoints_name: gsm8k_cold_start_freeze_embeddings
 save_steps: 10000
 lr: 5.0e-6
-freeze_embeddings: false
+freeze_embeddings: true

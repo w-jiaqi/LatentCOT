@@ -110,7 +110,7 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path):
 
         print("Finished training")
 
-model = LatentCOTModel(config.model, tokenizer, freeze_embeddings=config.freeze_embeddings, tie_weights=config.tie_weights)
+model = LatentCOTModel(config.model, tokenizer, freeze_embeddings=config.freeze_embeddings)
 
 print("Training model")
 

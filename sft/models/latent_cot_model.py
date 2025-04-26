@@ -14,7 +14,7 @@ class LossType(Enum):
     LATENTS = auto()
 
 class LatentCOTModel(nn.Module):
-    def __init__(self, model_id: str, tokenizer: LatentTokenizer, freeze_embeddings, tie_weights: bool = False):
+    def __init__(self, model_id: str, tokenizer: LatentTokenizer, freeze_embeddings):
         super(LatentCOTModel, self).__init__()
 
         self.model = AutoModelForCausalLM.from_pretrained(model_id)
@@ -31,10 +31,6 @@ class LatentCOTModel(nn.Module):
             self.embedding.requires_grad = False
             self.output_embedding.requires_grad = False
 
-        if tie_weights:
-            print("Tying model weights")
-            self.model.tie_weights()
-    
     def forward(
             self, 
             inputs_embeds: torch.Tensor, 
