@@ -65,11 +65,11 @@ tokenizer = LatentTokenizer(config.tokenizer)
 tokenizer.save_pretrained(tokenizer_checkpoints_path)
 
 if config.dataset == "4x4":
-    base_ds = get_4x4_dataset(streaming=False)
+    base_ds = get_4x4_dataset(streaming=True)
 elif config.dataset == "5x5":
-	base_ds = get_5x5_dataset(streaming=False)
+	base_ds = get_5x5_dataset(streaming=True)
 elif config.dataset == "gsm8k":
-    base_ds = get_gsm8k_dataset(streaming=False)
+    base_ds = get_gsm8k_dataset(streaming=True)
 else:
     raise ValueError(f"Unrecognized dataset: {config.dataset}")
 
