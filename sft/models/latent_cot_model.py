@@ -1,3 +1,4 @@
+import random
 import copy
 from typing import List, Tuple
 import torch
@@ -103,6 +104,7 @@ class LatentCOTModel(nn.Module):
             max_new_latents: int,
     ) -> torch.Tensor:
         # need to still add labels
+
         batch_size = question_ids.size(0)
 
         question_embeds = self.embedding(question_ids)   # (batch, q_seq, dim)
@@ -180,6 +182,21 @@ class LatentCOTModel(nn.Module):
             # # If all finished, break
             # if finished.all():
             #     break
+
+        # # dropout
+        # random_mask = (torch.rand(batch_size, 1, device=question_attention_mask.device) > 0.9).float()
+        # random_mask = random_mask.expand_as(question_attention_mask)
+
+        # question_attention_mask = (question_attention_mask * random_mask).type_as(question_attention_mask)
+
+        # question_attention_mask = torch.cat((
+        #     torch.ones((batch_size, 1), dtype=question_attention_mask.dtype, device=question_attention_mask.device), # bos
+        #     question_attention_mask,
+        #     torch.ones((batch_size, 1), dtype=question_attention_mask.dtype, device=question_attention_mask.device), # start_latent
+        # ), dim=1) # (batch, seq)
+
+        # attention_mask[:, :question_attention_mask.size(1)] = question_attention_mask
+
 
         # Build reasoning and answer input embeds
         reasoning_inputs_embeds = torch.cat((
@@ -261,6 +278,11 @@ class LatentCOTModel(nn.Module):
 
         reasoning_loss = reasoning_outputs.loss
         answer_loss = answer_outputs.loss
+
+        answer_loss = 2 * answer_loss # just trying some scaling stuff
+
+        # reasoning_loss = reasoning_loss * (reasoning_embeds.size(1) / answer_embeds.size(1))
+        # answer_loss = answer_loss * (answer_embeds.size(1) / reasoning_embeds.size(1))
 
         loss = reasoning_loss + answer_loss
 

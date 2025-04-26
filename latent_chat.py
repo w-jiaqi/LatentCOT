@@ -36,11 +36,19 @@ parser.add_argument(
 parser.add_argument(
 	"--max_new_latents", type=int, required=True
 )
+parser.add_argument(
+        "-p", "--pth", type=str
+)
 
 args = parser.parse_args()
 
 tokenizer = LatentTokenizer(args.tokenizer)
 model = LatentCOTModel(args.model, tokenizer, tie_weights=args.tie_weights).to('cuda')
+
+if args.pth is not None:
+    model.load_state_dict(torch.load(args.pth))
+
+model.eval()
 
 print("Latent Chat Ready")
 
