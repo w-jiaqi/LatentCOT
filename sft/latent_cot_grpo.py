@@ -81,7 +81,6 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path):
         token_optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
 
         dataloader = DataLoader(dataset['train'], batch_size=config.batch_num, collate_fn=grpo_collate_fn)
-        model = model.to(device)
 
         for epoch in range(config.epochs):
                 progress_bar = tqdm(dataloader, desc=f"Epoch: {epoch}")
@@ -111,7 +110,7 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path):
 
         print("Finished training")
 
-model = LatentCOTModel(config.model, tokenizer)
+model = LatentCOTModel(config.model, tokenizer, freeze_embeddings=config.freeze_embeddings, tie_weights=config.tie_weights)
 
 print("Training model")
 
