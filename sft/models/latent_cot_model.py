@@ -267,7 +267,7 @@ class LatentCOTModel(nn.Module):
         for _ in range(max_new_latents):
             outputs = self.model(
                 inputs_embeds=inputs_embeds if kv_cache is None else inputs_embeds[:, -1:, :],
-                attention_mask=attention_mask, # i have absolutely no clue why we can't slice the attention mask here 
+                attention_mask=attention_mask,
                 output_hidden_states=True,
                 use_cache=True,
                 past_key_values=kv_cache
