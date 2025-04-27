@@ -7,7 +7,6 @@ from torch.nn import functional as F
 from transformers import AutoModelForCausalLM
 from sft.models.latent_tokenizer import LatentTokenizer
 from enum import Enum, auto
-import torch.nn.init as init
 
 class LossType(Enum):
     TOKEN = auto()
@@ -275,19 +274,20 @@ class LatentCOTModel(nn.Module):
 
             kv_cache = outputs.past_key_values
 
-			# only will probe the first batch and the top 8 
-            if probe_latents:
-                logits = outputs.logits  # (batch, seq, vocab)
-                topk = torch.topk(torch.softmax(logits[0][-1], dim=0), k=8)
-                tokens = [self.tokenizer.decode([token]) for token in topk.indices.tolist()]
-
-                print("       ".join(tokens))
 
             last_layer = outputs.hidden_states[-1]  # (batch, seq, dim)
             next_prediction = torch.nn.functional.softmax(
                 self.latent_output_embedding(last_layer[:, -1, :]), dim=-1
             ) @ self.latent_embedding.weight  # (batch, dim)
             next_prediction = next_prediction.unsqueeze(1)  # (batch, 1, dim)
+
+			# only will probe the first batch and the top 8 
+            if probe_latents:
+                logits = self.latent_output_embedding(last_layer[:, -1:, :]) # (batch, seq, vocab)
+                topk = torch.topk(torch.softmax(logits[0][-1], dim=0), k=8)
+                tokens = [self.tokenizer.decode([token]) for token in topk.indices.tolist()]
+
+                print("\t".join(tokens))
 
             mse = torch.nn.functional.mse_loss(
                 end_latent_col_embed, next_prediction, reduction="none"

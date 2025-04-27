@@ -31,8 +31,8 @@ config = get_config(args.config)
 tokenizer = LatentTokenizer(config.tokenizer)
 model = LatentCOTModel(config.base_model, tokenizer, freeze_embeddings=True).to(device)
 
-if config.model_pth is not None:
-    model.load_state_dict(torch.load(config.model_pth))
+if config.model_path is not None:
+    model.load_state_dict(torch.load(config.model_path))
 
 model.eval()
 
