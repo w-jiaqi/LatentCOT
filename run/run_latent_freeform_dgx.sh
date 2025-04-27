@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --nodelist=gpu006
-#SBATCH --time=48:00:00
+#SBATCH --time=96:00:00
 #SBATCH --gpus=1
 #SBATCH --job-name=latent_freeform
 #SBATCH --output=/lustre/fs0/scratch/pkeung/multiplication/LatentCOT/logs/%x_%j/log.out
