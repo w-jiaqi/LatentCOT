@@ -5,9 +5,12 @@ epochs: 5
 checkpoints_dir: checkpoints
 batch_num: 32
 max_new_latents: 8
-checkpoints_name: 4x4_cold_start
+checkpoints_name: 4x4_skip_unembed
 save_steps: 10000
 lr: 5.0e-6
 freeze_embeddings: false
-unembed_latents: true
+unembed_latents: false
 dynamically_stop: false
+
+# this skips unembedding the last layer latents back to logits, softmaxing
+# then embedding back

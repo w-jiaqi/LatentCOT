@@ -9,3 +9,5 @@ checkpoints_name: gsm8k_cold_start_freeze_embeddings
 save_steps: 10000
 lr: 5.0e-6
 freeze_embeddings: true
+unembed_latents: true
+dynamically_stop: 

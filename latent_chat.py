@@ -31,8 +31,8 @@ config = get_config(args.config)
 tokenizer = LatentTokenizer(config.tokenizer)
 model = LatentCOTModel(config.base_model, tokenizer, freeze_embeddings=True).to(device)
 
-if config.model_path is not None:
-    model.load_state_dict(torch.load(config.model_path))
+if config.model_pth is not None:
+    model.load_state_dict(torch.load(config.model_pth))
 
 model.eval()
 
@@ -43,5 +43,21 @@ while True:
 
 	tokens = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to('cuda')
 
-	print(model.generate(tokens['input_ids'], tokens['attention_mask'], max_new_latents=config.max_new_latents, max_new_tokens=256, probe_latents=config.probe_latents, output_cot=True))
-	print(model.generate(tokens['input_ids'], tokens['attention_mask'], max_new_latents=config.max_new_latents, max_new_tokens=256, output_cot=False))
+	print(model.generate(
+              	inputs_ids=tokens['input_ids'], 
+				input_attention_mask=tokens['attention_mask'], 
+				max_new_latents=config.max_new_latents, 
+				max_new_tokens=256, 
+				probe_latents=config.probe_latents, 
+				output_cot=True, 
+				unembed_latents=config.unembed_latents, 
+				dynamically_stop=config.dynamically_stop))
+
+	print(model.generate(
+				inputs_ids=tokens['input_ids'], 
+				inputs_attention_mask=tokens['attention_mask'], 
+				max_new_latents=config.max_new_latents, 
+				max_new_tokens=256, 
+				output_cot=False,
+				unembed_latents=config.unembed_latents,
+				dynamically_stop=config.dynamically_stop))

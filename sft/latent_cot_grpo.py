@@ -86,6 +86,8 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path):
                         loss = model.grpo_forward(
                                 **batch,
                                 max_new_latents=config.max_new_latents,
+                                unembed_latents=config.unembed_latents,
+                                dynamically_stop=config.dynamically_stop,
                         )
 
                         progress_bar.set_postfix({'loss': loss.item()})

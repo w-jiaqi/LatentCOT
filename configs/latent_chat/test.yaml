@@ -1,6 +1,5 @@
 base_model: meta-llama/llama-3.2-1b
-tokenizer: checkpoints/latent-cot-grpo/4x4/pool_8_batched_dropout_high_adamw/tokenizer
-model_pth: checkpoints/latent-cot-grpo/4x4/pool_8_batched_dropout_high_adamw/model/final/model.pth
-tie_weights: false
-max_new_latents: 11
+tokenizer: checkpoints/tokenizer
+model_pth: checkpoints/model.pth
+max_new_latents: 8
 probe_latents: true

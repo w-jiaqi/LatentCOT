@@ -106,11 +106,15 @@ class LatentCOTModel(nn.Module):
             answer_labels: torch.Tensor,
 
             max_new_latents: int,
+            unembed_latents: bool,
+            dynamically_stop: bool
     ) -> torch.Tensor:
         batch_size = question_ids.size(0)
 
         base_inputs_embeds, base_attention_mask = self._generate_latents(
-            question_ids, question_attention_mask, max_new_latents
+            question_ids, question_attention_mask, max_new_latents,
+            unembed_latents=unembed_latents,
+            dynamically_stop=dynamically_stop
         )
 
         start_cot_col_embed = self._expand_token(self.tokenizer.start_cot_id, batch_size)
@@ -200,7 +204,9 @@ class LatentCOTModel(nn.Module):
             output_cot: bool,
             max_new_latents: int, 
             max_new_tokens: int, 
-            probe_latents: bool = False
+            unembed_latents: bool,
+            dynamically_stop: bool,
+            probe_latents: bool = False,
     ) -> str:
         if inputs_ids.dim() == 1:
             inputs_ids = inputs_ids.unsqueeze(0)
@@ -209,7 +215,10 @@ class LatentCOTModel(nn.Module):
         batch_dim = inputs_ids.size(0)
 
         inputs_embeds, attention_mask = self._generate_latents(
-            inputs_ids, input_attention_mask, max_new_latents, probe_latents=probe_latents
+            inputs_ids, input_attention_mask, max_new_latents, 
+            unembed_latents=unembed_latents,
+            dynamically_stop=dynamically_stop,
+            probe_latents=probe_latents,
         )
 
         if output_cot:
@@ -237,7 +246,9 @@ class LatentCOTModel(nn.Module):
             inputs_ids: torch.Tensor,  # (batch, seq_len)
             inputs_attention_mask: torch.Tensor,  # (batch, seq_len)
             max_new_latents: int,
-            probe_latents: bool = False
+            unembed_latents: bool,
+            probe_latents: bool = False,
+            dynamically_stop: bool = False,
     ) -> List[torch.Tensor]:
         batch_size = inputs_ids.size(0)
 
@@ -274,12 +285,14 @@ class LatentCOTModel(nn.Module):
 
             kv_cache = outputs.past_key_values
 
-
             last_layer = outputs.hidden_states[-1]  # (batch, seq, dim)
-            next_prediction = torch.nn.functional.softmax(
-                self.latent_output_embedding(last_layer[:, -1, :]), dim=-1
-            ) @ self.latent_embedding.weight  # (batch, dim)
-            next_prediction = next_prediction.unsqueeze(1)  # (batch, 1, dim)
+
+            if unembed_latents:
+                next_prediction = torch.nn.functional.softmax(
+                    self.latent_output_embedding(last_layer[:, -1:, :]), dim=-1
+                ) @ self.latent_embedding.weight  # (batch, 1, dim)
+            else:
+                next_prediction = last_layer[:, -1:, :]  # (batch, 1, dim)
 
 			# only will probe the first batch and the top 8 
             if probe_latents:
@@ -293,17 +306,20 @@ class LatentCOTModel(nn.Module):
                 end_latent_col_embed, next_prediction, reduction="none"
             ).sum(dim=-1).squeeze(-1)  # (batch,)
 
-            finished =  finished | (mse < 1e-3) # we cannot do inplace modifications
+            if dynamically_stop:
+                finished = finished | (mse < 1e-3) # we cannot do inplace modifications
 
-            pad_latent = torch.zeros_like(next_prediction)
-            pad_attention_mask = torch.zeros_like(attention_mask[:, -1:])
+                pad_latent = torch.zeros_like(next_prediction)
+                pad_attention_mask = torch.zeros_like(attention_mask[:, -1:])
 
-            next_prediction = torch.where(
-                finished.view(-1, 1, 1), pad_latent, next_prediction
-            )
-            next_attention_mask = torch.where(
-                finished.view(-1, 1), pad_attention_mask, torch.ones_like(attention_mask[:, -1:])
-            )
+                next_prediction = torch.where(
+                    finished.view(-1, 1, 1), pad_latent, next_prediction
+                )
+                next_attention_mask = torch.where(
+                    finished.view(-1, 1), pad_attention_mask, torch.ones_like(attention_mask[:, -1:])
+                )
+            else: 
+                next_attention_mask = torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device)
 
             inputs_embeds = torch.cat((
                 inputs_embeds, 
