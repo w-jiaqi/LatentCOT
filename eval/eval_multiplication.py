@@ -34,17 +34,17 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if device == "cpu":
     print("WARNING: USING CPU")
 
-# log_file = os.path.join(
-#     config.log_dir,
-#     f"{utils.string_to_filename(config.base_model)}_{config.dataset}_{utils.get_cur_time_string()}.log",
-# )
+log_file = os.path.join(
+    config.log_dir,
+    f"{utils.string_to_filename(config.base_model)}_{config.dataset}_{utils.get_cur_time_string()}.log",
+)
 
-# utils.create_dir_from_path(log_file)
+utils.create_dir_from_path(log_file)
 
-# logging.basicConfig(filename=log_file, level=logging.INFO)
-# logging.getLogger().addHandler(
-#     logging.StreamHandler(sys.stdout)
-# )  # also print out logs to stdout
+logging.basicConfig(filename=log_file, level=logging.INFO)
+logging.getLogger().addHandler(
+    logging.StreamHandler(sys.stdout)
+)  # also print out logs to stdout
 
 tokenizer = LatentTokenizer(config.tokenizer)
 model = LatentCOTModel(config.base_model, tokenizer, freeze_embeddings=True).to(device)
@@ -71,7 +71,7 @@ for idx, example in enumerate(ds['valid']):
         input_attention_mask=tokens['attention_mask'],
         max_new_latents=config.max_new_latents,
         max_new_tokens=256,
-        probe_latents=config.probe_latents,
+        probe_latents=False,
         output_cot=False,
         unembed_latents=config.unembed_latents,
         dynamically_stop=config.dynamically_stop,
