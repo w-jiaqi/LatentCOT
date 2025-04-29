@@ -9,3 +9,4 @@ __pycache__/
 *.err
 logs/
 wandb/
+configs/eval/eval.yaml
