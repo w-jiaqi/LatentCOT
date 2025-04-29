@@ -11,7 +11,6 @@ from data.multiplication_dataset import (
 )
 
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
 import argparse
 
 from tqdm.auto import tqdm
@@ -64,7 +63,7 @@ pb = tqdm(range(len(ds)))
 
 correct = 0
 
-for idx, example in enumerate(ds):
+for idx, example in enumerate(ds['valid']):
     tokens = tokenizer(example['question'], return_tensors="pt", add_special_tokens=False).to(device)
 
     ans_ids = model.generate(

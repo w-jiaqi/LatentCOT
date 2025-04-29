@@ -5,10 +5,10 @@ from datasets import load_dataset, DatasetDict, Dataset
 from typing import Union, Optional
 
 TRAIN_4x4_PATH = "data/multiplication/4x4/train.txt"
-TEST_4x4_PATH = "data/multiplication/4x4/valid.txt"
+VALID_4x4_PATH = "data/multiplication/4x4/valid.txt"
 
 TRAIN_5x5_PATH = "data/multiplication/5x5/train.txt"
-TEST_5x5_PATH = "data/multiplication/5x5/valid.txt"
+VALID_5x5_PATH = "data/multiplication/5x5/valid.txt"
 
 def preprocess_fn(example):
     text = example['text']
@@ -29,7 +29,7 @@ def get_4x4_dataset(streaming: bool) -> Union[DatasetDict, Dataset]:
         "text",
         data_files={
             "train": TRAIN_4x4_PATH,
-            "test": TEST_4x4_PATH,
+            "valid": VALID_4x4_PATH,
         },
         streaming=streaming
     )
@@ -43,7 +43,7 @@ def get_5x5_dataset(streaming: bool) -> Union[DatasetDict, Dataset]:
         "text",
         data_files={
             "train": TRAIN_5x5_PATH,
-            "test": TEST_5x5_PATH,
+            "valid": VALID_5x5_PATH,
         },
         streaming=streaming
     )
