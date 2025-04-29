@@ -2,11 +2,12 @@ import re
 
 
 def get_ans_from_response(response):
-    answer = response.strip()[::-1] # reversing string
+    answer = response.strip().replace(" ", "")[::-1] # reversing string
 
     try:
         return int(answer)
     except ValueError:
+        print("Error converting to int")
         return answer
 
 
