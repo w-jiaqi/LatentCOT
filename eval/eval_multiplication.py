@@ -1,9 +1,9 @@
 import sys, os
 
+sys.path.insert(0, os.path.abspath("."))  # hack for imports
+
 from sft.models.latent_cot_model import LatentCOTModel
 from sft.models.latent_tokenizer import LatentTokenizer
-
-sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
 from data.multiplication_dataset import (
     get_4x4_dataset,
