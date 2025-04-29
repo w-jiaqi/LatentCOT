@@ -36,7 +36,7 @@ run = wandb.init(
 
 base_checkpoints_path = os.path.join(
         config.checkpoints_dir, 
-        "latent_cot_grpo",
+        "latent-cot-grpo",
         config.dataset, 
 )
 
