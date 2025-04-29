@@ -5,10 +5,10 @@ epochs: 5
 checkpoints_dir: checkpoints
 batch_num: 32
 max_new_latents: 8
-checkpoints_name: 4x4_cold_start_freeze_embeddings
+checkpoints_name: 4x4_cold_start_freeze_embeddings_answer_scale_high
 save_steps: 10000
 lr: 5.0e-6
 freeze_embeddings: true
 unembed_latents: true
 dynamically_stop: false
-answer_loss_scaling: 2.0
+answer_loss_scaling: 5.0

@@ -107,7 +107,8 @@ class LatentCOTModel(nn.Module):
 
             max_new_latents: int,
             unembed_latents: bool,
-            dynamically_stop: bool
+            dynamically_stop: bool,
+            answer_loss_scaling: float,
     ) -> torch.Tensor:
         batch_size = question_ids.size(0)
 
@@ -193,7 +194,7 @@ class LatentCOTModel(nn.Module):
             labels=answer_labels
         )
 
-        loss = reasoning_outputs.loss + 2 * answer_outputs.loss
+        loss = reasoning_outputs.loss + answer_loss_scaling * answer_outputs.loss
 
         return loss
 

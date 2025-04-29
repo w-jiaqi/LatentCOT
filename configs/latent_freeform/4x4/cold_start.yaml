@@ -11,3 +11,4 @@ lr: 5.0e-6
 freeze_embeddings: false
 unembed_latents: true
 dynamically_stop: false
+answer_loss_scaling: 2.0

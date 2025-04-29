@@ -71,7 +71,7 @@ for idx, example in enumerate(ds['valid']):
         input_attention_mask=tokens['attention_mask'],
         max_new_latents=config.max_new_latents,
         max_new_tokens=256,
-        probe_latents=False,
+        probe_latents=config.probe_latents,
         output_cot=False,
         unembed_latents=config.unembed_latents,
         dynamically_stop=config.dynamically_stop,

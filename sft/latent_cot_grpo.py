@@ -88,6 +88,7 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path):
                                 max_new_latents=config.max_new_latents,
                                 unembed_latents=config.unembed_latents,
                                 dynamically_stop=config.dynamically_stop,
+                                answer_loss_scaling=config.answer_loss_scaling
                         )
 
                         progress_bar.set_postfix({'loss': loss.item()})
