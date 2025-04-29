@@ -41,9 +41,9 @@ print("Latent Chat Ready")
 while True:
 	prompt = input()
 
-	tokens = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to('cuda')
+	tokens = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to(device)
 
-	print(model.generate(
+	cot_ids = model.generate(
               	inputs_ids=tokens['input_ids'], 
 				input_attention_mask=tokens['attention_mask'], 
 				max_new_latents=config.max_new_latents, 
@@ -51,13 +51,19 @@ while True:
 				probe_latents=config.probe_latents, 
 				output_cot=True, 
 				unembed_latents=config.unembed_latents, 
-				dynamically_stop=config.dynamically_stop))
+				dynamically_stop=config.dynamically_stop)
 
-	print(model.generate(
+	ans_ids = model.generate(
 				inputs_ids=tokens['input_ids'], 
-				inputs_attention_mask=tokens['attention_mask'], 
+				input_attention_mask=tokens['attention_mask'], 
 				max_new_latents=config.max_new_latents, 
 				max_new_tokens=256, 
 				output_cot=False,
 				unembed_latents=config.unembed_latents,
-				dynamically_stop=config.dynamically_stop))
+				dynamically_stop=config.dynamically_stop)
+
+	print(cot_ids)
+	print(tokenizer.decode(cot_ids[0]))
+
+	print(ans_ids)
+	print(tokenizer.decode(ans_ids[0]))

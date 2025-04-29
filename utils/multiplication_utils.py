@@ -2,9 +2,7 @@ import re
 
 
 def get_ans_from_response(response):
-    answer = (
-        response.split("####")[-1].strip().replace(" ", "")[::-1]
-    )  # reversing string
+    answer = response.strip()[::-1] # reversing string
 
     try:
         return int(answer)

@@ -237,9 +237,7 @@ class LatentCOTModel(nn.Module):
             max_new_tokens=max_new_tokens
         )
 
-        generated_text = self.tokenizer.decode(output[0])
-
-        return generated_text
+        return output
 
     def _generate_latents(
             self, 
