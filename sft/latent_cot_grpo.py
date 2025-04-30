@@ -153,6 +153,7 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
     print(prompts)
     print(completions)
     ans = [ans.split("<|end-latent|>")[-1] for ans in completions]
+    print(ans)
 
     rewards = []
 
@@ -167,7 +168,7 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
 
     return rewards
 
-training_args = GRPOConfig(output_dir="test-grpo", logging_steps=10)
+training_args = GRPOConfig(output_dir="test-grpo", logging_steps=10, beta=0.0)
 trainer = GRPOTrainer(
     model=model,
     processing_class=tokenizer,
