@@ -14,7 +14,7 @@ from transformers import AutoModelForCausalLM, PreTrainedModel, AutoTokenizer
 import utils.multiplication_utils as m_utils
 
 from datasets import load_dataset
-from trl import GRPOConfig, GRPOTrainer
+from trl import GRPOConfig, GRPOTrainer, PPOConfig, PPOTrainer
 import torch
 import argparse
 import copy
@@ -169,8 +169,8 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
 
     return rewards
 
-training_args = GRPOConfig(output_dir="test-grpo", logging_steps=10)
-trainer = GRPOTrainer(
+training_args = PPOConfig(output_dir="test-grpo", logging_steps=10)
+trainer = PPOTrainer(
     model=model,
     processing_class=tokenizer,
     reward_funcs=reward_ans,
