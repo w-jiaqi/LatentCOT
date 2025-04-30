@@ -105,6 +105,7 @@ def generate(
 
         logit_noise_std_dev = 0.1 
         logits = latent_output_embedding(last_layer[:, -1:, :])
+        print(logits[0, -1, :])
         noise = torch.randn_like(logits) * logit_noise_std_dev
         logits = logits + noise
 
