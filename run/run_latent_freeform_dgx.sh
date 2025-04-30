@@ -9,6 +9,6 @@ srun --container-image=/lustre/fs0/scratch/pkeung/squash/nvidia+pytorch+24.10-py
      --container-mounts=/lustre/fs0 \
      bash -c "cd /lustre/fs0/scratch/pkeung/$1/LatentCOT && \
                source env/bin/activate && \
-               python sft/latent_cot_grpo.py -c $2"
+               python sft/latent_cot_freeform.py -c $2"
 
 # usage: sbatch run_latent_freeform_dgx.sh (multiplication | gsm8k) (config_path)

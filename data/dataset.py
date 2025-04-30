@@ -319,3 +319,12 @@ def grpo_collate_fn(batch):
         'answer_labels': answer_labels,
     }
 
+
+def get_grpo_dataset(
+        dataset: Union[DatasetDict, Dataset],
+):
+    dataset = dataset.rename_column("question", "prompt")
+    dataset = dataset.rename_column("answer", "ground_truth")
+    dataset = dataset.remove_columns(["reasoning"])
+
+    return dataset

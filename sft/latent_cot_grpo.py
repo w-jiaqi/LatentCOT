@@ -1,127 +1,164 @@
 import sys, os
+
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
-import torch
-from torch.utils.data import DataLoader
-import argparse
-from data.dataset import get_latent_cot_grpo_dataset, grpo_collate_fn
-from sft.models.latent_cot_model import LatentCOTModel
-from sft.models.latent_tokenizer import LatentTokenizer
-from tqdm.auto import tqdm
-from data.multiplication_dataset import get_4x4_dataset, get_5x5_dataset
+from data.dataset import get_grpo_dataset
+from data.multiplication_dataset import get_4x4_dataset
 from data.gsm8k_dataset import get_gsm8k_dataset
-import wandb
-from utils.utils import torch_save, torch_save_sigint, get_config
 
-wandb.login()
+from transformers import AutoModelForCausalLM, PreTrainedModel, AutoTokenizer
+import utils.multiplication_utils as m_utils
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-if device == 'cpu':
-        print("WARNING: USING CPU")
+from datasets import load_dataset
+from trl import GRPOConfig, GRPOTrainer
+import torch
+import argparse
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "-c", "--config", type=str, required=True
+    "-m", "--model_pth", type=str, required=True
+)
+parser.add_argument(
+    "-i", "--embedding_pth", type=str, required=True
+)
+parser.add_argument(
+    "o", "--output_embedding_pth", type=str, required=True
 )
 
-config = get_config(parser.parse_args().config)
+config = parser.parse_args()
 
-run = wandb.init(
-        project="Latent COT GRPO (not really)",
-        name=config.checkpoints_name,
-        config=vars(config)
+start_latent_string = "<|start-latent|>"
+end_latent_string = "<|end-latent|>"
+start_cot_string = "<|start-cot|>"
+end_cot_string = "<|end-cot|>"
+
+latent_string = "<|latent-|>"
+
+model_id = "meta-llama/Llama-3.2-1B"
+
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = 'left'
+
+tokenizer.add_tokens(start_latent_string)
+tokenizer.add_tokens(end_latent_string)
+tokenizer.add_tokens(start_cot_string)
+tokenizer.add_tokens(end_cot_string)
+tokenizer.add_tokens(latent_string)
+
+start_latent_id = tokenizer.convert_tokens_to_ids(start_latent_string)
+end_latent_id = tokenizer.convert_tokens_to_ids(end_latent_string)
+start_cot_id = tokenizer.convert_tokens_to_ids(start_cot_string)
+end_cot_id = tokenizer.convert_tokens_to_ids(end_cot_string)
+latent_id = tokenizer.convert_tokens_to_ids(latent_string)
+
+model = AutoModelForCausalLM.from_pretrained(model_id)
+model.model.load_state_dict(torch.load(config.model_pth))
+model.latent_embedding.load_state_dict(torch.load(config.embedding_pth))
+model.latent_output_embedding.load_state_dict(torch.load(config.output_embedding_pth))
+
+original_generate = model.generate
+
+def generate(
+    self,
+    inputs,
+    attention_mask,
+    **kwargs
+):
+    def _expand_token(token_id: int, batch_size: int) -> torch.Tensor: # (batch, 1, dim)
+        return self.get_input_embeddings()(
+            torch.full((batch_size, 1), token_id, dtype=torch.long, device=self.get_input_embeddings().weight.device)
+        )
+    
+    inputs_embeds = self.get_input_embeddings()(inputs)
+    batch_size = inputs.size(0)
+
+    start_latent_col_embed = _expand_token(start_latent_id, batch_size)
+    end_latent_col_embed = _expand_token(end_latent_id, batch_size)
+    eos_token_embed = _expand_token(tokenizer.eos_token_id, batch_size)
+    inputs_embeds = torch.cat((
+        inputs_embeds,
+        start_latent_col_embed
+    ), dim=1)
+
+    attention_mask = torch.cat((
+        attention_mask,
+        torch.ones((batch_size, 1), device=attention_mask.device)
+    ), dim=1)
+
+    kv_cache = None
+
+    for _ in range(10):
+        outputs = self(
+            inputs_embeds=inputs_embeds if kv_cache is None else inputs_embeds[:, -1:, :],
+            attention_mask=attention_mask,
+            output_hidden_states=True,
+            use_cache=True,
+            past_key_values=kv_cache
+        )
+
+        kv_cache = outputs.past_key_values
+
+        last_layer = outputs.hidden_states[-1]  # (batch, seq, dim)
+
+        next_embedding = torch.nn.functional.softmax(
+            self.get_output_embeddings()(last_layer[:, -1:, :]), dim=-1
+        ) @ self.get_input_embeddings().weight  # (batch, 1, dim)
+        # next_embedding = last_layer[:, -1:, :]
+
+        inputs_embeds = torch.cat((
+            inputs_embeds,
+            next_embedding
+        ), dim=1)
+        attention_mask = torch.cat((
+            attention_mask,
+            torch.ones((batch_size, 1), device=attention_mask.device)
+        ), dim=1)
+
+    inputs_embeds = torch.cat((
+        inputs_embeds,
+        end_latent_col_embed
+    ), dim=1)
+
+    attention_mask = torch.cat((
+        attention_mask,
+        torch.ones((batch_size, 1), device=attention_mask.device)
+    ), dim=1)
+    
+    output = original_generate(
+        inputs_embeds=inputs_embeds,
+        attention_mask=attention_mask,
+        **kwargs
+    )
+
+    return torch.cat((
+        inputs,
+        torch.full((batch_size, 1), start_latent_id, dtype=torch.long, device=inputs.device),
+        torch.full((batch_size, 10), latent_id, dtype=torch.long, device=inputs.device),
+        torch.full((batch_size, 1), end_latent_id, dtype=torch.long, device=inputs.device),
+        output
+    ), dim=1)
+
+model.generate = generate.__get__(model, type(model))
+
+
+base_ds = get_4x4_dataset(streaming=False)
+dataset = get_grpo_dataset(base_ds)
+
+# Define the reward function, which rewards completions that are close to 20 characters
+def reward_ans(prompts, completions, ground_truth, **kwargs):
+    ans = [ans.split("<|end-latent|>")[-1] for ans in completions]
+
+    return [m_utils.get_ans_from_response(c) == m_utils.get_ans_from_response(gt) if 1 else -1 for c, gt in zip(ans, ground_truth)]
+
+training_args = GRPOConfig(output_dir="test-grpo", logging_steps=10, beta=0.0)
+trainer = GRPOTrainer(
+    model=model,
+    processing_class=tokenizer,
+    reward_funcs=reward_ans,
+    args=training_args,
+    train_dataset=dataset['train'],
 )
-
-base_checkpoints_path = os.path.join(
-        config.checkpoints_dir, 
-        "latent-cot-grpo",
-        config.dataset, 
-)
-
-model_checkpoints_path = os.path.join(
-        base_checkpoints_path,
-        config.checkpoints_name,
-        "model",        
-)
-
-tokenizer_checkpoints_path = os.path.join(
-        base_checkpoints_path,
-        config.checkpoints_name,
-        "tokenizer",
-)
-
-print(f"Saving model @ {model_checkpoints_path}")
-print(f"Saving tokenizer @ {tokenizer_checkpoints_path}")
-
-tokenizer = LatentTokenizer(config.tokenizer)
-tokenizer.save_pretrained(tokenizer_checkpoints_path)
-
-if config.dataset == "4x4":
-    base_ds = get_4x4_dataset(streaming=False)
-elif config.dataset == "5x5":
-    base_ds = get_5x5_dataset(streaming=False)
-elif config.dataset == "gsm8k":
-    base_ds = get_gsm8k_dataset(streaming=False)
-else:
-    raise ValueError(f"Unrecognized dataset: {config.dataset}")
-
-ds = get_latent_cot_grpo_dataset(
-        dataset=base_ds,
-        tokenizer=tokenizer,
-)
-
-def train_model(model: LatentCOTModel, dataset, checkpoints_path):
-        token_optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
-
-        dataloader = DataLoader(dataset['train'], batch_size=config.batch_num, collate_fn=grpo_collate_fn)
-
-        for epoch in range(config.epochs):
-                progress_bar = tqdm(dataloader, desc=f"Epoch: {epoch}")
-
-                for idx, batch in enumerate(progress_bar):
-                        batch = {k: v.to(device) for k, v in batch.items()}
-
-                        loss = model.grpo_forward(
-                                **batch,
-                                max_new_latents=config.max_new_latents,
-                                unembed_latents=config.unembed_latents,
-                                dynamically_stop=config.dynamically_stop,
-                                answer_loss_scaling=config.answer_loss_scaling
-                        )
-
-                        progress_bar.set_postfix({'loss': loss.item()})
-                        run.log({'loss': loss.item()})
-                        
-                        token_optimizer.zero_grad()
-                        loss.backward()
-
-                        token_optimizer.step()
-
-                        if idx != 0 and idx % config.save_steps == 0: 
-                            torch_save(model, os.path.join(checkpoints_path, f"epoch_{epoch}_{idx}", "model.pth"))
-
-                print(f"Finished Epoch ({epoch})")
-
-                torch_save(model, os.path.join(checkpoints_path, f"epoch_{epoch}", "model.pth"))
-
-        print("Finished training")
-
-model = LatentCOTModel(config.model, tokenizer, freeze_embeddings=config.freeze_embeddings).to(device)
-
-print("Training model")
-
-torch_save_sigint(model, os.path.join(model_checkpoints_path, "sigint", "model.pth"))
-
-train_model(
-        model=model,
-        dataset=ds,
-        checkpoints_path=model_checkpoints_path,
-)
-
-run.finish()
-
-print(f"Model saved @ {model_checkpoints_path}")
-print(f"Tokenizer saved @ {tokenizer_checkpoints_path}")
-print("Finished training")
+trainer.train()
