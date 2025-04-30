@@ -161,9 +161,7 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
         true = m_utils.get_ans_from_response(gt)
 
         if pred == true:
-            rewards.append(10)
-        elif not m_utils.valid_response(c):
-            rewards.append(-5)
+            rewards.append(1)
         else:
             rewards.append(-1)
 
