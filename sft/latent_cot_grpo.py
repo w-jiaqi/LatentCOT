@@ -43,6 +43,9 @@ latent_output_embedding = latent_output_embedding.to('cuda')
 
 original_generate = model.generate
 
+tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "left"
+
 def generate(
     self,
     inputs,
