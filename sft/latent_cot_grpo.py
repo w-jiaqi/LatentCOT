@@ -25,7 +25,7 @@ parser.add_argument(
     "-i", "--embedding_pth", type=str, required=True
 )
 parser.add_argument(
-    "o", "--output_embedding_pth", type=str, required=True
+    "-o", "--output_embedding_pth", type=str, required=True
 )
 
 config = parser.parse_args()
