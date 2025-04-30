@@ -115,7 +115,7 @@ def generate(
 
         attention_mask = torch.cat((
             attention_mask,
-            torch.ones((batch_size, 1), dtype=torch.float32, device=attention_mask.device)
+            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device)
         ), dim=1)
 
     inputs_embeds = torch.cat((
