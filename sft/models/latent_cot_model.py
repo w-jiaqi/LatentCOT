@@ -320,6 +320,9 @@ class LatentCOTModel(nn.Module):
             else: 
                 next_attention_mask = torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device)
 
+            print("DO NOT FORGET TO REMOVE THIS")
+            next_prediction = torch.randn_like(next_prediction)
+
             inputs_embeds = torch.cat((
                 inputs_embeds, 
                 next_prediction
