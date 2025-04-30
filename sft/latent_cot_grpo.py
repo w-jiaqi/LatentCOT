@@ -20,6 +20,7 @@ import argparse
 import copy
 
 print("DONT FORGET TO ADD A CONFIG TO SET THE LATENT COUNT")
+print("also figure out how to update input/output latent embeds")
 LATENT_COUNT = 8
 
 parser = argparse.ArgumentParser()
@@ -163,6 +164,8 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
             rewards.append(-5)
         else:
             rewards.append(-1)
+
+    return rewards
 
 training_args = GRPOConfig(output_dir="test-grpo", logging_steps=10, beta=0.0)
 trainer = GRPOTrainer(
