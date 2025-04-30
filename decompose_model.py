@@ -28,6 +28,6 @@ decompose_path = os.path.join(
 	config.checkpoints_name
 )
 
-utils.torch_save(model.model, os.path.join(decompose_path, "model.pth"))
+model.model.save_pretrained(os.path.join(decompose_path, "model"))
 utils.torch_save(model.latent_embedding, os.path.join(decompose_path, "latent_embedding.pth"))
 utils.torch_save(model.latent_output_embedding, os.path.join(decompose_path, "latent_output_embedding.pth"))

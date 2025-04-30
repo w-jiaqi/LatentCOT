@@ -15,6 +15,7 @@ from datasets import load_dataset
 from trl import GRPOConfig, GRPOTrainer
 import torch
 import argparse
+import copy
 
 parser = argparse.ArgumentParser()
 
@@ -50,8 +51,12 @@ start_cot_id = tokenizer.convert_tokens_to_ids(start_cot_string)
 end_cot_id = tokenizer.convert_tokens_to_ids(end_cot_string)
 latent_id = tokenizer.convert_tokens_to_ids(latent_string)
 
-model = LatentCOTModel(model_id, tokenizer, freeze_embeddings=True)
-model.load_state_dict(torch.load(config.model_pth))
+model = AutoModelForCausalLM.from_pretrained(config.model)
+latent_embedding = copy.deepcopy(model.get_input_embeddings())
+latent_output_embedding = copy.deepcopy(model.get_output_embeddings())
+
+latent_embedding.load_state_dict(torch.load(config.latent_pth))
+latent_output_embedding.load_state_dict(torch.load(config.output_pth))
 
 original_generate = model.generate
 
@@ -98,8 +103,8 @@ def generate(
         last_layer = outputs.hidden_states[-1]  # (batch, seq, dim)
 
         next_embedding = torch.nn.functional.softmax(
-            self.latent_output_embedding(last_layer[:, -1:, :]), dim=-1
-        ) @ self.latent_embedding.weight  # (batch, 1, dim)
+            latent_output_embedding(last_layer[:, -1:, :]), dim=-1
+        ) @ latent_embedding.weight  # (batch, 1, dim)
         # next_embedding = last_layer[:, -1:, :]
 
         inputs_embeds = torch.cat((
