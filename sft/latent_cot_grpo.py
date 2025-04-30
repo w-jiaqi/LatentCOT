@@ -51,7 +51,7 @@ end_cot_id = tokenizer.convert_tokens_to_ids(end_cot_string)
 latent_id = tokenizer.convert_tokens_to_ids(latent_string)
 
 model = LatentCOTModel(model_id, tokenizer, freeze_embeddings=True)
-model.latent_embeddingoad_state_dict(torch.load(config.model_pth))
+model.load_state_dict(torch.load(config.model_pth))
 
 original_generate = model.generate
 
