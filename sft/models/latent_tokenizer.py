@@ -4,6 +4,7 @@ start_latent_string = "<|start-latent|>"
 end_latent_string = "<|end-latent|>"
 start_cot_string = "<|start-cot|>"
 end_cot_string = "<|end-cot|>"
+latent_string = "<|latent|>"
 
 # wrapper around tokenizer to forward all calls
 class LatentTokenizer():
@@ -22,10 +23,14 @@ class LatentTokenizer():
 		if not self._tokenizer.convert_tokens_to_ids(end_cot_string):
 			self._tokenizer.add_tokens(end_cot_string)
 
+		if not self._tokenizer.convert_tokens_to_ids(latent_string):
+			self._tokenizer.add_tokens(latent_string)
+
 		self.start_latent_id = self._tokenizer.convert_tokens_to_ids(start_latent_string)
 		self.end_latent_id = self._tokenizer.convert_tokens_to_ids(end_latent_string)
 		self.start_cot_id = self._tokenizer.convert_tokens_to_ids(start_cot_string)
 		self.end_cot_id = self._tokenizer.convert_tokens_to_ids(end_cot_string)
+		self.latent_id = self._tokenizer.convert_tokens_to_ids(latent_string)
 
 	def __getattr__(self, name):
 		return getattr(self._tokenizer, name)
