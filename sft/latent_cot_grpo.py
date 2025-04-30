@@ -158,13 +158,19 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
     rewards = []
 
     for c, gt in zip(ans, ground_truth):
-        pred = m_utils.get_ans_from_response(c)
-        true = m_utils.get_ans_from_response(gt)
+        pred_val = m_utils.get_ans_from_response(c)
+        true_val = m_utils.get_ans_from_response(gt)
 
-        if pred == true:
-            rewards.append(1)
+        if true_val is None or pred_val is None:
+            reward = -1
         else:
-            rewards.append(-1)
+            pred_str = str(pred_val)
+            true_str = str(true_val)
+            # Compare digit by digit
+            correct = sum(1 for pd, td in zip(pred_str, true_str) if pd == td)
+            reward = correct / len(true_str)
+
+        rewards.append(reward)
 
     return rewards
 
