@@ -65,7 +65,7 @@ def generate(
             torch.full((batch_size, 1), token_id, dtype=torch.long, device=self.get_input_embeddings().weight.device)
         )
     
-    print(inputs)
+    print(tokenizer.decode(inputs[0]))
 
     inputs_embeds = self.get_input_embeddings()(inputs)
     batch_size = inputs.size(0)
