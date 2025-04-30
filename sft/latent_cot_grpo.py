@@ -22,6 +22,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "-m", "--model_pth", type=str, required=True
 )
+parser.add_argument(
+    "-i", "--input_pth", type=str, required=True
+)
+parser.add_argument(
+    "-o", "--output_pth", type=str, required=True
+)
 
 config = parser.parse_args()
 
@@ -55,7 +61,7 @@ model = AutoModelForCausalLM.from_pretrained(config.model)
 latent_embedding = copy.deepcopy(model.get_input_embeddings())
 latent_output_embedding = copy.deepcopy(model.get_output_embeddings())
 
-latent_embedding.load_state_dict(torch.load(config.latent_pth))
+latent_embedding.load_state_dict(torch.load(config.input_pth))
 latent_output_embedding.load_state_dict(torch.load(config.output_pth))
 
 original_generate = model.generate
