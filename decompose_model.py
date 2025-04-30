@@ -1,4 +1,6 @@
 import sys, os
+
+from sft.models.latent_tokenizer import LatentTokenizer
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
 from sft.models.latent_cot_model import LatentCOTModel
@@ -17,7 +19,8 @@ parser.add_argument(
 
 config = parser.parse_args()
 
-model = LatentCOTModel("meta-llama/llama-3.2-1b")
+tokenizer = LatentTokenizer("meta-llama/llama-3.2-1b")
+model = LatentCOTModel("meta-llama/llama-3.2-1b", tokenizer, freeze_embeddings=True)
 model.load_state_dict(torch.load(config.model_pth))
 
 decompose_path = os.path.join(

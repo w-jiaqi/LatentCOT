@@ -1,5 +1,7 @@
 import sys, os
 
+from sft.models.latent_cot_model import LatentCOTModel
+
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
 from data.dataset import get_grpo_dataset
@@ -54,7 +56,7 @@ start_cot_id = tokenizer.convert_tokens_to_ids(start_cot_string)
 end_cot_id = tokenizer.convert_tokens_to_ids(end_cot_string)
 latent_id = tokenizer.convert_tokens_to_ids(latent_string)
 
-model = AutoModelForCausalLM.from_pretrained(model_id)
+model = LatentCOTModel(model_id, tokenizer, freeze_embeddings=True)
 model.model.load_state_dict(torch.load(config.model_pth))
 model.latent_embedding.load_state_dict(torch.load(config.embedding_pth))
 model.latent_output_embedding.load_state_dict(torch.load(config.output_embedding_pth))
