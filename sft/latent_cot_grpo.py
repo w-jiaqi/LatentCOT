@@ -28,7 +28,7 @@ parser.add_argument(
 config = parser.parse_args()
 
 wrapper_tokenizer = LatentTokenizer("meta-llama/llama-3.2-1b")
-wrapper_model = LatentCOTModel("meta-llama/llama-3.2-1b", tokenizer, freeze_embeddings=True)
+wrapper_model = LatentCOTModel("meta-llama/llama-3.2-1b", wrapper_tokenizer, freeze_embeddings=True)
 wrapper_model.load_state_dict(torch.load(config.model_pth))
 
 model = wrapper_model.model
