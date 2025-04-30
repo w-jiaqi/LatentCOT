@@ -106,15 +106,14 @@ def generate(
         logit_noise_std_dev = 100.0 
         logits = latent_output_embedding(last_layer[:, -1:, :])
         noise = torch.randn_like(logits) * logit_noise_std_dev
-        logits = logits + noise
-
-        print(logits[0, -1, :])
+        # logits = logits + noise
+        
 
         dist = torch.nn.functional.softmax(
             logits, dim=-1
         ) 
         # print(dist)
-        # noised_dist = torch.distributions.dirichlet.Dirichlet(dist).sample()
+        dist = torch.distributions.dirichlet.Dirichlet(dist).sample()
         # print(noised_dist)
         next_embedding = dist @ latent_embedding.weight  # (batch, 1, dim)
         # next_embedding = last_layer[:, -1:, :]
