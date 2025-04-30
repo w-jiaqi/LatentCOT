@@ -55,6 +55,9 @@ original_generate = model.generate
 tokenizer.pad_token = tokenizer.eos_token
 tokenizer.padding_side = "left"
 
+print(model.get_input_embeddings().requires_grad)
+print(model.get_output_embeddings().requires_grad)
+
 def generate(
     self,
     inputs,
@@ -160,7 +163,7 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
 
         if pred == true:
             rewards.append(1)
-        elif not m_utils.valid_response(pred):
+        elif not m_utils.valid_response(c):
             rewards.append(-5)
         else:
             rewards.append(-1)
