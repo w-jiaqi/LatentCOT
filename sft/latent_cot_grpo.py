@@ -81,7 +81,7 @@ def generate(
     ), dim=1)
 
     attention_mask = torch.cat((
-        torch.ones((batch_size, 1), device=attention_mask.device)
+        torch.ones((batch_size, 1), device=attention_mask.device),
         attention_mask,
         torch.ones((batch_size, 1), device=attention_mask.device)
     ), dim=1)
