@@ -69,8 +69,6 @@ def generate(
             torch.full((batch_size, 1), token_id, dtype=torch.long, device=self.get_input_embeddings().weight.device)
         )
     
-    print(tokenizer.decode(inputs[0]))
-
     inputs_embeds = self.get_input_embeddings()(inputs)
     batch_size = inputs.size(0)
 
@@ -152,6 +150,7 @@ base_ds = get_4x4_dataset(streaming=False)
 dataset = get_grpo_dataset(base_ds)
 
 def reward_ans(prompts, completions, ground_truth, **kwargs):
+    print(prompts)
     print(completions)
     ans = [ans.split("<|end-latent|>")[-1] for ans in completions]
 
@@ -162,7 +161,7 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
         true = m_utils.get_ans_from_response(gt)
 
         if pred == true:
-            rewards.append(1)
+            rewards.append(10)
         elif not m_utils.valid_response(c):
             rewards.append(-5)
         else:
