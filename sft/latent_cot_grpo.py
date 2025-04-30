@@ -36,8 +36,8 @@ tokenizer = wrapper_tokenizer._tokenizer
 latent_embedding = wrapper_model.latent_embedding
 latent_output_embedding = wrapper_model.latent_output_embedding
 
-model = model.to('cuda')
-tokenizer = tokenizer.to('cuda')
+# model = model.to('cuda')
+# tokenizer = tokenizer.to('cuda')
 latent_embedding = latent_embedding.to('cuda')
 latent_output_embedding = latent_output_embedding.to('cuda')
 
