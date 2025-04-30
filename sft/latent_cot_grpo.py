@@ -113,7 +113,7 @@ def generate(
 
         attention_mask = torch.cat((
             attention_mask,
-            torch.ones((batch_size, 1), device=attention_mask.device)
+            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device)
         ), dim=1)
 
     inputs_embeds = torch.cat((
@@ -129,6 +129,7 @@ def generate(
     output = original_generate(
         inputs_embeds=inputs_embeds,
         attention_mask=attention_mask,
+        max_new_tokens=30,
         **kwargs
     )
 
@@ -150,7 +151,18 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
     print(completions)
     ans = [ans.split("<|end-latent|>")[-1] for ans in completions]
 
-    return [m_utils.get_ans_from_response(c) == m_utils.get_ans_from_response(gt) if 1 else -1 for c, gt in zip(ans, ground_truth)]
+    rewards = []
+
+    for c, gt in zip(ans, ground_truth):
+        pred = m_utils.get_ans_from_response(c)
+        true = m_utils.get_ans_from_response(gt)
+
+        if pred == true:
+            rewards.append(1)
+        elif not m_utils.valid_response(pred):
+            rewards.append(-5)
+        else:
+            rewards.append(-1)
 
 training_args = GRPOConfig(output_dir="test-grpo", logging_steps=10, beta=0.0)
 trainer = GRPOTrainer(

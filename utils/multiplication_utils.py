@@ -10,6 +10,15 @@ def get_ans_from_response(response):
         print("Error converting to int")
         return answer
 
+def valid_response(response):
+    answer = response.strip().replace(" ", "")[::-1] # reversing string
+
+    try:
+        ans = int(answer)
+        return True
+    except ValueError:
+        return False
+
 
 # the base model struggles to output in reverse order
 def get_ans_from_response_base_model(response):
