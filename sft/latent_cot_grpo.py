@@ -1,5 +1,6 @@
 import sys, os
-
+import copy
+import re  # added for regex matching
 
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
@@ -17,7 +18,6 @@ from datasets import load_dataset
 from trl import GRPOConfig, GRPOTrainer, PPOConfig, PPOTrainer
 import torch
 import argparse
-import copy
 
 print("DONT FORGET TO ADD A CONFIG TO SET THE LATENT COUNT")
 print("also figure out how to update input/output latent embeds")
@@ -169,6 +169,11 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
             # Compare digit by digit
             correct = sum(1 for pd, td in zip(pred_str, true_str) if pd == td)
             reward = correct / len(true_str)
+            
+            # Bonus reward if c is formatted exactly as "digit digit ... digit" with exactly 8 digits
+            # E.g., "4 2 8 1 6 2 1 4" (digits can be different)
+            if re.fullmatch(r'[0-9]( [0-9]){7}', c.strip()):
+                reward += 0.5
 
         rewards.append(reward)
 
