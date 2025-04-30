@@ -1,5 +1,7 @@
 import sys, os
 
+from sft.models.latent_tokenizer import LatentTokenizer
+
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
 from sft.models.latent_cot_model import LatentCOTModel
@@ -20,54 +22,23 @@ import copy
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "-m", "--model", type=str, required=True
-)
-parser.add_argument(
-    "-i", "--input_pth", type=str, required=True
-)
-parser.add_argument(
-    "-o", "--output_pth", type=str, required=True
+    "-m", "--model_pth", type=str, required=True
 )
 
 config = parser.parse_args()
 
-start_latent_string = "<|start-latent|>"
-end_latent_string = "<|end-latent|>"
-start_cot_string = "<|start-cot|>"
-end_cot_string = "<|end-cot|>"
+tokenizer = LatentTokenizer("meta-llama/llama-3.2-1b")
+wrapper_model = LatentCOTModel("meta-llama/llama-3.2-1b", tokenizer, freeze_embeddings=True)
+wrapper_model.load_state_dict(torch.load(config.model_pth))
 
-latent_string = "<|latent-|>"
-
-model_id = "meta-llama/Llama-3.2-1B"
-
-tokenizer = AutoTokenizer.from_pretrained(model_id)
-
-tokenizer.pad_token = tokenizer.eos_token
-tokenizer.padding_side = 'left'
-
-tokenizer.add_tokens(start_latent_string)
-tokenizer.add_tokens(end_latent_string)
-tokenizer.add_tokens(start_cot_string)
-tokenizer.add_tokens(end_cot_string)
-tokenizer.add_tokens(latent_string)
-
-start_latent_id = tokenizer.convert_tokens_to_ids(start_latent_string)
-end_latent_id = tokenizer.convert_tokens_to_ids(end_latent_string)
-start_cot_id = tokenizer.convert_tokens_to_ids(start_cot_string)
-end_cot_id = tokenizer.convert_tokens_to_ids(end_cot_string)
-latent_id = tokenizer.convert_tokens_to_ids(latent_string)
-
-model = AutoModelForCausalLM.from_pretrained(config.model)
-latent_embedding = copy.deepcopy(model.get_input_embeddings())
-latent_output_embedding = copy.deepcopy(model.get_output_embeddings())
+model = wrapper_model.model
+latent_embedding = wrapper_model.latent_embedding
+latent_output_embedding = wrapper_model.latent_output_embedding
 
 model = model.to('cuda')
 tokenizer = tokenizer.to('cuda')
 latent_embedding = latent_embedding.to('cuda')
 latent_output_embedding = latent_output_embedding.to('cuda')
-
-latent_embedding.load_state_dict(torch.load(config.input_pth))
-latent_output_embedding.load_state_dict(torch.load(config.output_pth))
 
 original_generate = model.generate
 
@@ -85,8 +56,8 @@ def generate(
     inputs_embeds = self.get_input_embeddings()(inputs)
     batch_size = inputs.size(0)
 
-    start_latent_col_embed = _expand_token(start_latent_id, batch_size)
-    end_latent_col_embed = _expand_token(end_latent_id, batch_size)
+    start_latent_col_embed = _expand_token(tokenizer.start_latent_id, batch_size)
+    end_latent_col_embed = _expand_token(tokenizer.end_latent_id, batch_size)
     eos_token_embed = _expand_token(tokenizer.eos_token_id, batch_size)
     inputs_embeds = torch.cat((
         inputs_embeds,
@@ -100,7 +71,7 @@ def generate(
 
     kv_cache = None
 
-    for _ in range(10):
+    for _ in range(8):
         outputs = self(
             inputs_embeds=inputs_embeds if kv_cache is None else inputs_embeds[:, -1:, :],
             attention_mask=attention_mask,
@@ -145,9 +116,9 @@ def generate(
 
     return torch.cat((
         inputs,
-        torch.full((batch_size, 1), start_latent_id, dtype=torch.long, device=inputs.device),
-        torch.full((batch_size, 10), latent_id, dtype=torch.long, device=inputs.device),
-        torch.full((batch_size, 1), end_latent_id, dtype=torch.long, device=inputs.device),
+        torch.full((batch_size, 1), tokenizer.start_latent_id, dtype=torch.long, device=inputs.device),
+        torch.full((batch_size, 8), tokenizer.latent_id, dtype=torch.long, device=inputs.device),
+        torch.full((batch_size, 1), tokenizer.end_latent_id, dtype=torch.long, device=inputs.device),
         output
     ), dim=1)
 
@@ -157,7 +128,6 @@ model.generate = generate.__get__(model, type(model))
 base_ds = get_4x4_dataset(streaming=False)
 dataset = get_grpo_dataset(base_ds)
 
-# Define the reward function, which rewards completions that are close to 20 characters
 def reward_ans(prompts, completions, ground_truth, **kwargs):
     ans = [ans.split("<|end-latent|>")[-1] for ans in completions]
 
