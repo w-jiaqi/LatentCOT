@@ -167,8 +167,8 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
 
     return rewards
 
-training_args = PPOConfig(output_dir="test-grpo", logging_steps=10)
-trainer = PPOTrainer(
+training_args = GRPOConfig(output_dir="test-grpo", logging_steps=10)
+trainer = GRPOTrainer(
     model=model,
     processing_class=tokenizer,
     reward_funcs=reward_ans,
