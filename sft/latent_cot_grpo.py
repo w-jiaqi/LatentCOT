@@ -21,12 +21,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "-m", "--model_pth", type=str, required=True
 )
-parser.add_argument(
-    "-i", "--embedding_pth", type=str, required=True
-)
-parser.add_argument(
-    "-o", "--output_embedding_pth", type=str, required=True
-)
 
 config = parser.parse_args()
 
@@ -57,9 +51,7 @@ end_cot_id = tokenizer.convert_tokens_to_ids(end_cot_string)
 latent_id = tokenizer.convert_tokens_to_ids(latent_string)
 
 model = LatentCOTModel(model_id, tokenizer, freeze_embeddings=True)
-model.model.load_state_dict(torch.load(config.model_pth))
-model.latent_embedding.load_state_dict(torch.load(config.embedding_pth))
-model.latent_output_embedding.load_state_dict(torch.load(config.output_embedding_pth))
+model.latent_embeddingoad_state_dict(torch.load(config.model_pth))
 
 original_generate = model.generate
 
@@ -106,8 +98,8 @@ def generate(
         last_layer = outputs.hidden_states[-1]  # (batch, seq, dim)
 
         next_embedding = torch.nn.functional.softmax(
-            self.get_output_embeddings()(last_layer[:, -1:, :]), dim=-1
-        ) @ self.get_input_embeddings().weight  # (batch, 1, dim)
+            self.latent_output_embedding(last_layer[:, -1:, :]), dim=-1
+        ) @ self.latent_embedding.weight  # (batch, 1, dim)
         # next_embedding = last_layer[:, -1:, :]
 
         inputs_embeds = torch.cat((
