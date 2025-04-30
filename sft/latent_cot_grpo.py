@@ -106,7 +106,9 @@ def generate(
         dist = torch.nn.functional.softmax(
             latent_output_embedding(last_layer[:, -1:, :]), dim=-1
         ) 
+        print(dist)
         noised_dist = torch.distributions.dirichlet.Dirichlet(dist).sample()
+        print(noised_dist)
         next_embedding = noised_dist @ latent_embedding.weight  # (batch, 1, dim)
         # next_embedding = last_layer[:, -1:, :]
 
@@ -152,8 +154,8 @@ base_ds = get_4x4_dataset(streaming=False)
 dataset = get_grpo_dataset(base_ds)
 
 def reward_ans(prompts, completions, ground_truth, **kwargs):
-    print(prompts)
-    print(completions)
+    # print(prompts)
+    # print(completions)
     ans = [ans.split("<|end-latent|>")[-1] for ans in completions]
     print(ans)
 
@@ -163,19 +165,24 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
         pred_val = m_utils.get_ans_from_response(c)
         true_val = m_utils.get_ans_from_response(gt)
 
-        if true_val is None or pred_val is None:
-            reward = -2
-        else:
-            pred_str = str(pred_val)
-            true_str = str(true_val)
-            # Compare digit by digit
-            correct = sum(1 for pd, td in zip(pred_str, true_str) if pd == td)
-            reward = correct / len(true_str)
+        # if true_val is None or pred_val is None:
+        #     reward = -2
+        # else:
+        #     pred_str = str(pred_val)
+        #     true_str = str(true_val)
+        #     # Compare digit by digit
+        #     correct = sum(1 for pd, td in zip(pred_str, true_str) if pd == td)
+        #     reward = correct / len(true_str)
             
-            # Bonus reward if c is formatted exactly as "digit digit ... digit" with exactly 8 digits
-            # E.g., "4 2 8 1 6 2 1 4" (digits can be different)
-            if re.fullmatch(r'[0-9]( [0-9]){7}', c.strip()):
-                reward += 0.5
+        #     # Bonus reward if c is formatted exactly as "digit digit ... digit" with exactly 8 digits
+        #     # E.g., "4 2 8 1 6 2 1 4" (digits can be different)
+        #     if re.fullmatch(r'[0-9]( [0-9]){7}', c.strip()):
+        #         reward += 0.5
+
+        if pred_val == true_val:
+            reward = 1
+        else:
+            reward = -1
 
         rewards.append(reward)
 
