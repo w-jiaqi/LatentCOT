@@ -20,7 +20,7 @@ import copy
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "-m", "--model_pth", type=str, required=True
+    "-m", "--model", type=str, required=True
 )
 parser.add_argument(
     "-i", "--input_pth", type=str, required=True
