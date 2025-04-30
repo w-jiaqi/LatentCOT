@@ -58,8 +58,8 @@ end_cot_id = tokenizer.convert_tokens_to_ids(end_cot_string)
 latent_id = tokenizer.convert_tokens_to_ids(latent_string)
 
 model = AutoModelForCausalLM.from_pretrained(config.model)
-latent_embedding = copy.deepcopy(model.get_input_embeddings())
-latent_output_embedding = copy.deepcopy(model.get_output_embeddings())
+latent_embedding = copy.deepcopy(model.get_input_embeddings()).to('cuda')
+latent_output_embedding = copy.deepcopy(model.get_output_embeddings()).to('cuda')
 
 latent_embedding.load_state_dict(torch.load(config.input_pth))
 latent_output_embedding.load_state_dict(torch.load(config.output_pth))
