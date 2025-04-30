@@ -141,7 +141,6 @@ def generate(
         inputs_embeds=inputs_embeds,
         attention_mask=attention_mask,
         max_new_tokens=30,
-        **kwargs
     )
 
     return torch.cat((
