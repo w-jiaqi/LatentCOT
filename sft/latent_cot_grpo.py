@@ -206,7 +206,8 @@ class RewardModel(torch.nn.Module):
 
 reward_model = RewardModel()
 
-training_args = PPOConfig(output_dir="test-grpo", logging_steps=10, beta=0.0)
+# training_args = PPOConfig(output_dir="test-grpo", logging_steps=10, beta=0.0)
+training_args = PPOConfig(output_dir="test-grpo", logging_steps=10)
 trainer = PPOTrainer(
     model=model,
     processing_class=tokenizer,
