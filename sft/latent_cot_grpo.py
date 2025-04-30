@@ -1,9 +1,9 @@
 import sys, os
 
-from sft.models.latent_tokenizer import LatentTokenizer
 
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
+from sft.models.latent_tokenizer import LatentTokenizer
 from sft.models.latent_cot_model import LatentCOTModel
 
 from data.dataset import get_grpo_dataset
