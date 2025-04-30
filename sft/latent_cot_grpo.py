@@ -162,7 +162,7 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
         true_val = m_utils.get_ans_from_response(gt)
 
         if true_val is None or pred_val is None:
-            reward = -1
+            reward = -2
         else:
             pred_str = str(pred_val)
             true_str = str(true_val)
