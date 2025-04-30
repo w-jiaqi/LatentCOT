@@ -19,6 +19,9 @@ import torch
 import argparse
 import copy
 
+print("DONT FORGET TO ADD A CONFIG TO SET THE LATENT COUNT")
+LATENT_COUNT = 8
+
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
@@ -62,11 +65,14 @@ def generate(
             torch.full((batch_size, 1), token_id, dtype=torch.long, device=self.get_input_embeddings().weight.device)
         )
     
+    print(inputs)
+
     inputs_embeds = self.get_input_embeddings()(inputs)
     batch_size = inputs.size(0)
 
     start_latent_col_embed = _expand_token(wrapper_tokenizer.start_latent_id, batch_size)
     end_latent_col_embed = _expand_token(wrapper_tokenizer.end_latent_id, batch_size)
+
     inputs_embeds = torch.cat((
         inputs_embeds,
         start_latent_col_embed
@@ -79,7 +85,7 @@ def generate(
 
     kv_cache = None
 
-    for _ in range(8):
+    for _ in range(LATENT_COUNT):
         outputs = self(
             inputs_embeds=inputs_embeds if kv_cache is None else inputs_embeds[:, -1:, :],
             attention_mask=attention_mask,
@@ -101,6 +107,7 @@ def generate(
             inputs_embeds,
             next_embedding
         ), dim=1)
+
         attention_mask = torch.cat((
             attention_mask,
             torch.ones((batch_size, 1), device=attention_mask.device)
@@ -125,7 +132,7 @@ def generate(
     return torch.cat((
         inputs,
         torch.full((batch_size, 1), wrapper_tokenizer.start_latent_id, dtype=torch.long, device=inputs.device),
-        torch.full((batch_size, 8), latent_id, dtype=torch.long, device=inputs.device),
+        torch.full((batch_size, LATENT_COUNT), latent_id, dtype=torch.long, device=inputs.device),
         torch.full((batch_size, 1), wrapper_tokenizer.end_latent_id, dtype=torch.long, device=inputs.device),
         output
     ), dim=1)
