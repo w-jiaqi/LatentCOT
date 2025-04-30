@@ -115,7 +115,7 @@ def generate(
 
         attention_mask = torch.cat((
             attention_mask,
-            torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device)
+            torch.ones((batch_size, 1), dtype=torch.float32, device=attention_mask.device)
         ), dim=1)
 
     inputs_embeds = torch.cat((
@@ -179,11 +179,39 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
 
     return rewards
 
-training_args = GRPOConfig(output_dir="test-grpo", logging_steps=10, beta=0.0)
-trainer = GRPOTrainer(
+class RewardModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+    
+    def forward(self, prompts, completions, ground_truth, **kwargs):
+        # Extract answers after the latent token
+        ans = [ans.split("<|end-latent|>")[-1] for ans in completions]
+        rewards = []
+        for c, gt in zip(ans, ground_truth):
+            pred_val = m_utils.get_ans_from_response(c)
+            true_val = m_utils.get_ans_from_response(gt)
+            if true_val is None or pred_val is None:
+                reward = -2.0
+            else:
+                pred_str = str(pred_val)
+                true_str = str(true_val)
+                # Compare digit by digit
+                correct = sum(1 for pd, td in zip(pred_str, true_str) if pd == td)
+                reward = correct / len(true_str)
+                # Bonus reward if c is formatted as "digit digit ... digit" with exactly 8 digits
+                if re.fullmatch(r'[0-9]( [0-9]){7}', c.strip()):
+                    reward += 0.5
+            rewards.append(reward)
+        return torch.tensor(rewards, dtype=torch.float32)
+
+reward_model = RewardModel()
+
+training_args = PPOConfig(output_dir="test-grpo", logging_steps=10, beta=0.0)
+trainer = PPOTrainer(
     model=model,
     processing_class=tokenizer,
-    reward_funcs=reward_ans,
+    # reward_funcs=reward_ans,
+    reward_model=reward_model,
     args=training_args,
     train_dataset=dataset['train'],
 )
