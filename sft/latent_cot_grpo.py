@@ -70,15 +70,18 @@ def generate(
     inputs_embeds = self.get_input_embeddings()(inputs)
     batch_size = inputs.size(0)
 
+    bos_col_embed = _expand_token(tokenizer.bos_token_id, batch_size)
     start_latent_col_embed = _expand_token(wrapper_tokenizer.start_latent_id, batch_size)
     end_latent_col_embed = _expand_token(wrapper_tokenizer.end_latent_id, batch_size)
 
     inputs_embeds = torch.cat((
+        bos_col_embed,
         inputs_embeds,
         start_latent_col_embed
     ), dim=1)
 
     attention_mask = torch.cat((
+        torch.ones((batch_size, 1), device=attention_mask.device)
         attention_mask,
         torch.ones((batch_size, 1), device=attention_mask.device)
     ), dim=1)
