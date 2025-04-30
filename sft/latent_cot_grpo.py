@@ -170,7 +170,7 @@ def reward_ans(prompts, completions, ground_truth, **kwargs):
 
     return rewards
 
-training_args = GRPOConfig(output_dir="test-grpo", logging_steps=10, beta=0.0)
+training_args = GRPOConfig(output_dir="test-grpo", logging_steps=10)
 trainer = GRPOTrainer(
     model=model,
     processing_class=tokenizer,
