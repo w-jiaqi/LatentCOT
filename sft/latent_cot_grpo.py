@@ -27,11 +27,12 @@ parser.add_argument(
 
 config = parser.parse_args()
 
-tokenizer = LatentTokenizer("meta-llama/llama-3.2-1b")
+wrapper_tokenizer = LatentTokenizer("meta-llama/llama-3.2-1b")
 wrapper_model = LatentCOTModel("meta-llama/llama-3.2-1b", tokenizer, freeze_embeddings=True)
 wrapper_model.load_state_dict(torch.load(config.model_pth))
 
 model = wrapper_model.model
+tokenizer = wrapper_tokenizer._tokenizer
 latent_embedding = wrapper_model.latent_embedding
 latent_output_embedding = wrapper_model.latent_output_embedding
 
@@ -56,9 +57,8 @@ def generate(
     inputs_embeds = self.get_input_embeddings()(inputs)
     batch_size = inputs.size(0)
 
-    start_latent_col_embed = _expand_token(tokenizer.start_latent_id, batch_size)
-    end_latent_col_embed = _expand_token(tokenizer.end_latent_id, batch_size)
-    eos_token_embed = _expand_token(tokenizer.eos_token_id, batch_size)
+    start_latent_col_embed = _expand_token(wrapper_tokenizer.start_latent_id, batch_size)
+    end_latent_col_embed = _expand_token(wrapper_tokenizer.end_latent_id, batch_size)
     inputs_embeds = torch.cat((
         inputs_embeds,
         start_latent_col_embed
@@ -116,9 +116,9 @@ def generate(
 
     return torch.cat((
         inputs,
-        torch.full((batch_size, 1), tokenizer.start_latent_id, dtype=torch.long, device=inputs.device),
-        torch.full((batch_size, 8), tokenizer.latent_id, dtype=torch.long, device=inputs.device),
-        torch.full((batch_size, 1), tokenizer.end_latent_id, dtype=torch.long, device=inputs.device),
+        torch.full((batch_size, 1), wrapper_tokenizer.start_latent_id, dtype=torch.long, device=inputs.device),
+        torch.full((batch_size, 8), wrapper_tokenizer.latent_id, dtype=torch.long, device=inputs.device),
+        torch.full((batch_size, 1), wrapper_tokenizer.end_latent_id, dtype=torch.long, device=inputs.device),
         output
     ), dim=1)
 
