@@ -106,9 +106,9 @@ def generate(
         dist = torch.nn.functional.softmax(
             latent_output_embedding(last_layer[:, -1:, :]), dim=-1
         ) 
-        print(dist)
+        # print(dist)
         noised_dist = torch.distributions.dirichlet.Dirichlet(dist).sample()
-        print(noised_dist)
+        # print(noised_dist)
         next_embedding = noised_dist @ latent_embedding.weight  # (batch, 1, dim)
         # next_embedding = last_layer[:, -1:, :]
 
