@@ -114,6 +114,8 @@ def generate(
         ) 
         # print(dist)
         dist = torch.distributions.dirichlet.Dirichlet(dist).sample()
+
+        print(dist[:, -1, :])
         # print(noised_dist)
         next_embedding = dist @ latent_embedding.weight  # (batch, 1, dim)
         # next_embedding = last_layer[:, -1:, :]
