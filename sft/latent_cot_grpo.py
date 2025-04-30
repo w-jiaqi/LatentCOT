@@ -137,6 +137,7 @@ base_ds = get_4x4_dataset(streaming=False)
 dataset = get_grpo_dataset(base_ds)
 
 def reward_ans(prompts, completions, ground_truth, **kwargs):
+    print(completions)
     ans = [ans.split("<|end-latent|>")[-1] for ans in completions]
 
     return [m_utils.get_ans_from_response(c) == m_utils.get_ans_from_response(gt) if 1 else -1 for c, gt in zip(ans, ground_truth)]
