@@ -41,6 +41,11 @@ latent_output_embedding = wrapper_model.latent_output_embedding
 latent_embedding = latent_embedding.to('cuda')
 latent_output_embedding = latent_output_embedding.to('cuda')
 
+tokenizer.add_tokens("<|latent|>")
+latent_id = tokenizer.convert_tokens_to_ids("<|latent|>")
+
+model.resize_token_embeddings(len(tokenizer))
+
 original_generate = model.generate
 
 tokenizer.pad_token = tokenizer.eos_token
@@ -120,7 +125,7 @@ def generate(
     return torch.cat((
         inputs,
         torch.full((batch_size, 1), wrapper_tokenizer.start_latent_id, dtype=torch.long, device=inputs.device),
-        torch.full((batch_size, 8), wrapper_tokenizer.latent_id, dtype=torch.long, device=inputs.device),
+        torch.full((batch_size, 8), latent_id, dtype=torch.long, device=inputs.device),
         torch.full((batch_size, 1), wrapper_tokenizer.end_latent_id, dtype=torch.long, device=inputs.device),
         output
     ), dim=1)
