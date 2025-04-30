@@ -211,6 +211,7 @@ training_args = PPOConfig(output_dir="test-grpo", logging_steps=10)
 trainer = PPOTrainer(
     model=model,
     ref_model=copy.deepcopy(model),
+    value_model=model,
     processing_class=tokenizer,
     # reward_funcs=reward_ans,
     reward_model=reward_model,
