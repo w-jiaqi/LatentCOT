@@ -103,13 +103,13 @@ def generate(
 
         last_layer = outputs.hidden_states[-1]  # (batch, seq, dim)
 
-        noise_std_dev = 0.01
+        noise_std_dev = 0.1
         latent = last_layer[:, -1:, :]
         # print(latent[0, 0, :])
         # logits = latent_output_embedding(latent)
-        # noise = torch.randn_like(latent) * noise_std_dev
+        noise = torch.randn_like(latent) * noise_std_dev
         # logits = logits + noise
-        # latent = latent + noise
+        latent = latent + noise
         
 
         # dist = torch.nn.functional.softmax(
@@ -124,7 +124,7 @@ def generate(
         next_embedding = latent
         # next_embedding = last_layer[:, -1:, :]
 
-        next_embedding = torch.randn_like(next_embedding)
+        # next_embedding = torch.randn_like(next_embedding)
 
         inputs_embeds = torch.cat((
             inputs_embeds,
