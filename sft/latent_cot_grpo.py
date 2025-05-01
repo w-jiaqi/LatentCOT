@@ -105,11 +105,11 @@ def generate(
 
         noise_std_dev = 0.01
         latent = last_layer[:, -1:, :]
-        print(latent[0, 0, :])
+        # print(latent[0, 0, :])
         # logits = latent_output_embedding(latent)
-        noise = torch.randn_like(latent) * noise_std_dev
+        # noise = torch.randn_like(latent) * noise_std_dev
         # logits = logits + noise
-        latent = latent + noise
+        # latent = latent + noise
         
 
         # dist = torch.nn.functional.softmax(
