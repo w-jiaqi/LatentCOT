@@ -103,8 +103,9 @@ def generate(
 
         last_layer = outputs.hidden_states[-1]  # (batch, seq, dim)
 
-        noise_std_dev = 0.1
+        noise_std_dev = 0.01
         latent = last_layer[:, -1:, :]
+        print(latent[0, 0, :])
         # logits = latent_output_embedding(latent)
         noise = torch.randn_like(latent) * noise_std_dev
         # logits = logits + noise
