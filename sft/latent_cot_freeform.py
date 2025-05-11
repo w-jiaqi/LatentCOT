@@ -29,7 +29,7 @@ parser.add_argument(
 config = get_config(parser.parse_args().config)
 
 run = wandb.init(
-        project="Latent COT GRPO (not really)",
+        project="Latent COT Freeform",
         name=config.checkpoints_name,
         config=vars(config)
 )
