@@ -220,7 +220,7 @@ def collate_fn(batch):
         'labels_embeds_mask': labels_embeds_mask
     }
 
-def get_latent_cot_grpo_dataset(
+def get_latent_cot_freeform_dataset(
         dataset: Union[DatasetDict, Dataset],
         tokenizer: LatentTokenizer,
 ):
@@ -247,7 +247,7 @@ def get_latent_cot_grpo_dataset(
 
     return dataset
 
-def grpo_collate_fn(batch):
+def freeform_collate_fn(batch):
     max_question_len = max(example['question_ids'].shape[0] for example in batch)
     max_reasoning_len = max(example['reasoning_ids'].shape[0] for example in batch)
     max_answer_len = max(example['answer_ids'].shape[0] for example in batch)

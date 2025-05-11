@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.abspath("."))  # hack for imports
 import torch
 from torch.utils.data import DataLoader
 import argparse
-from data.dataset import get_latent_cot_grpo_dataset, grpo_collate_fn
+from data.dataset import get_latent_cot_freeform_dataset, freeform_collate_fn
 from sft.models.latent_cot_model import LatentCOTModel
 from sft.models.latent_tokenizer import LatentTokenizer
 from tqdm.auto import tqdm
@@ -36,7 +36,7 @@ run = wandb.init(
 
 base_checkpoints_path = os.path.join(
         config.checkpoints_dir, 
-        "latent-cot-grpo",
+        "latent-cot-freeform",
         config.dataset, 
 )
 
@@ -67,7 +67,7 @@ elif config.dataset == "gsm8k":
 else:
     raise ValueError(f"Unrecognized dataset: {config.dataset}")
 
-ds = get_latent_cot_grpo_dataset(
+ds = get_latent_cot_freeform_dataset(
         dataset=base_ds,
         tokenizer=tokenizer,
 )
@@ -75,7 +75,7 @@ ds = get_latent_cot_grpo_dataset(
 def train_model(model: LatentCOTModel, dataset, checkpoints_path):
         token_optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
 
-        dataloader = DataLoader(dataset['train'], batch_size=config.batch_num, collate_fn=grpo_collate_fn)
+        dataloader = DataLoader(dataset['train'], batch_size=config.batch_num, collate_fn=freeform_collate_fn)
 
         for epoch in range(config.epochs):
                 progress_bar = tqdm(dataloader, desc=f"Epoch: {epoch}")
@@ -83,7 +83,7 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path):
                 for idx, batch in enumerate(progress_bar):
                         batch = {k: v.to(device) for k, v in batch.items()}
 
-                        loss = model.grpo_forward(
+                        loss = model.freeform_forward(
                                 **batch,
                                 max_new_latents=config.max_new_latents,
                                 unembed_latents=config.unembed_latents,
