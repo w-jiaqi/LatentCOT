@@ -13,4 +13,4 @@ checkpoints_name: pool_2
 
 lr: 1.0e-5
 
-no_cache: False
+no_cache: True
