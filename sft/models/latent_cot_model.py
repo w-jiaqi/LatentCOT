@@ -252,8 +252,6 @@ class LatentCOTModel(nn.Module):
         hidden_states = outputs.hidden_states[-1]  # (batch, seq_len, hidden_dim)
         logits = self.latent_output_embedding(hidden_states)  # (batch, seq_len, vocab_size)
 
-        logits = outputs.logits  # (batch, seq_len, vocab_size)
-
         batch, seq, vocab = logits.shape
 
         logits = logits.view(-1, vocab)
