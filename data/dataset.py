@@ -108,6 +108,11 @@ def get_latent_cot_sft_dataset(
 
         latent_reasoning_length, latent_reasoning_embeddings = compress_embeddings(reasoning_embeddings, latent_pool)
 
+        print(bos_col_embed)
+        print(question_embeddings)
+        print(start_latent_col_embed)
+        print(latent_reasoning_embeddings)
+        
         cot_inputs_embeds = torch.cat((
             bos_col_embed,
             question_embeddings,
@@ -424,6 +429,8 @@ def get_latent_cot_ce_sft_dataset(
             create_soft_labels(answer_ids),
             create_soft_labels(eos_col)
         ), dim=0)
+
+        assert inputs_embeds.shape[0] == labels.shape[0], f"inputs_embeds: {inputs_embeds.shape}, labels: {labels.shape}"
 
         return {
             'inputs_embeds': inputs_embeds,
