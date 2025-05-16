@@ -458,8 +458,8 @@ def get_latent_cot_ce_sft_dataset(
             eos_soft
         ], dim=1)  # (batch, seq, vocab)
 
-        ignore_mask = torch.ones_like(attention_mask)
-        ignore_mask[:, :question_length + 2] = 0
+        # ignore_mask = torch.ones_like(attention_mask)
+        # ignore_mask[:, :question_length + 2] = 0
         
         assert inputs_embeds.shape[0] == labels.shape[0] and inputs_embeds.shape[1] == labels.shape[1], f"inputs_embeds: {inputs_embeds.shape}, labels: {labels.shape}"
         assert inputs_embeds.shape[0] == ignore_mask.shape[0], f"inputs_embeds: {inputs_embeds.shape}, ignore_mask: {ignore_mask.shape}"
@@ -468,7 +468,7 @@ def get_latent_cot_ce_sft_dataset(
             'inputs_embeds': inputs_embeds,
             'attention_mask': attention_mask,
             'labels': labels,
-            'ignore_mask': ignore_mask,
+            # 'ignore_mask': ignore_mask,
         }
 
     dataset = dataset.map(preprocess_fn, batched=True, batch_size=32, with_indices=False, remove_columns=['question', 'reasoning', 'answer'])

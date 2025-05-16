@@ -262,7 +262,7 @@ class LatentCOTModel(nn.Module):
         logits = logits.view(-1, vocab)
         labels = labels.view(-1, vocab)
 
-        ce_loss = torch.nn.CrossEntropyLoss(reduction='none')
+        ce_loss = lambda logits, targets: -(targets * torch.log_softmax(logits, dim=-1)).sum(dim=-1)
 
         per_token_loss = ce_loss(logits, labels).view(batch, seq)
 
