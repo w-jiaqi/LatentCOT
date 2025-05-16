@@ -117,7 +117,7 @@ model = LatentCOTModel(config.model, tokenizer, freeze_embeddings=True)
 ds = get_latent_cot_ce_sft_dataset(
 	dataset=base_ds,
 	tokenizer=tokenizer,
-	embedding=model.embedding,
+	embedding=model.latent_embedding,
 	latent_pool=config.latent_pool,
 ) 
 
