@@ -403,13 +403,13 @@ def get_latent_cot_ce_sft_dataset(
 
         question_length = question_ids.shape[0]
 
-        latent_reasoning_embeddings, latent_reasoning_labels = create_latent_embeddings(reasoning_ids, latent_pool)
+        latent_reasoning_embeddings, latent_reasoning_labels = create_latent_embeddings(reasoning_ids, latent_pool, embedding)
 
-        print(bos_col_embed)
-        print(question_embeddings)
-        print(start_latent_col_embed)
-        print(latent_reasoning_embeddings)
-        print(latent_reasoning_labels)
+        # print(bos_col_embed)
+        # print(question_embeddings)
+        # print(start_latent_col_embed)
+        # print(latent_reasoning_embeddings)
+        # print(latent_reasoning_labels)
 
         inputs_embeds = torch.cat((
             bos_col_embed,
