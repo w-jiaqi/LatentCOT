@@ -426,9 +426,9 @@ def get_latent_cot_ce_sft_dataset(
         labels = torch.cat((
             torch.zeros((question_length + 2, len(tokenizer)), device=device), # bos, start_latent,
             latent_reasoning_labels,
-            create_soft_labels(end_latent_col),
-            create_soft_labels(answer_ids),
-            create_soft_labels(eos_col)
+            create_soft_labels(end_latent_col, len(tokenizer)),
+            create_soft_labels(answer_ids, len(tokenizer)),
+            create_soft_labels(eos_col, len(tokenizer))
         ), dim=0)
 
         assert inputs_embeds.shape[0] == labels.shape[0], f"inputs_embeds: {inputs_embeds.shape}, labels: {labels.shape}"
