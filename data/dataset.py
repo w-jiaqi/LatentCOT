@@ -375,7 +375,7 @@ def get_latent_cot_ce_sft_dataset(
         embedding: torch.nn.Module,
         latent_pool: int,
 ) -> Union[DatasetDict, Dataset]:
-    device = embedding.weight.device
+    device = torch.device('cuda')
 
     def preprocess_fn(batch):
         start_latent_col = torch.tensor(tokenizer.start_latent_id, device=device).unsqueeze(0) # (1, )
