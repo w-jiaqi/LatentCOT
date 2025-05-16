@@ -471,7 +471,7 @@ def get_latent_cot_ce_sft_dataset(
             # 'ignore_mask': ignore_mask,
         }
 
-    dataset = dataset.map(preprocess_fn, batched=True, batch_size=32, with_indices=False, remove_columns=['question', 'reasoning', 'answer'])
+    dataset = dataset.map(preprocess_fn, batched=True, batch_size=128, with_indices=False, remove_columns=['question', 'reasoning', 'answer'])
     # dataset.set_format('pt')
 
     return dataset
