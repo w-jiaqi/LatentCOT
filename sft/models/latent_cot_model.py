@@ -243,6 +243,10 @@ class LatentCOTModel(nn.Module):
             labels: torch.Tensor,  # (batch, seq_len, vocab_size)
             ignore_mask: torch.Tensor = None  # (batch, seq_len), 1 for valid tokens, 0 to ignore
     ) -> torch.Tensor:
+        inputs_embeds = inputs_embeds[:, :-1, :].contiguous()  # (batch, seq_len, dim)
+        attention_mask = attention_mask[:, :-1]  # (batch, seq_len)
+        labels = labels[:, 1:, :].contiguous()  # (batch, seq_len, vocab_size)
+
         outputs = self.model(
             inputs_embeds=inputs_embeds,
             attention_mask=attention_mask,
