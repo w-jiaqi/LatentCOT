@@ -103,8 +103,9 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path, lr):
 			loss_value = loss.item()
 
 			postfix_dict = {}
+			postfix_dict["loss"] = loss_value
 
-			progress_bar.set_postfix({loss: loss_value})
+			progress_bar.set_postfix(postfix_dict)
 			run.log(postfix_dict)
 
 		print(f"Finished Epoch ({epoch})")
