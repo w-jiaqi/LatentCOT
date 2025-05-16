@@ -394,9 +394,9 @@ def get_latent_cot_ce_sft_dataset(
         reasoning = batch['reasoning']
         answer = batch['answer']
 
-        question_ids = tokenizer.encode(question, return_tensors='pt', add_special_tokens=False)[0] # remove batch dimension
-        reasoning_ids = tokenizer.encode(reasoning, return_tensors='pt', add_special_tokens=False)[0]
-        answer_ids = tokenizer.encode(answer, return_tensors='pt', add_special_tokens=False)[0]
+        question_ids = tokenizer.encode(question, return_tensors='pt', add_special_tokens=False)[0].to(device) # remove batch dimension
+        reasoning_ids = tokenizer.encode(reasoning, return_tensors='pt', add_special_tokens=False)[0].to(device)
+        answer_ids = tokenizer.encode(answer, return_tensors='pt', add_special_tokens=False)[0].to(device)
 
         question_embeddings = embedding(question_ids) # (seq_len, embedding_dim)
         answer_embeddings = embedding(answer_ids)
