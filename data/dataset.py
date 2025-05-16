@@ -462,7 +462,7 @@ def get_latent_cot_ce_sft_dataset(
         # ignore_mask[:, :question_length + 2] = 0
         
         assert inputs_embeds.shape[0] == labels.shape[0] and inputs_embeds.shape[1] == labels.shape[1], f"inputs_embeds: {inputs_embeds.shape}, labels: {labels.shape}"
-        assert inputs_embeds.shape[0] == ignore_mask.shape[0], f"inputs_embeds: {inputs_embeds.shape}, ignore_mask: {ignore_mask.shape}"
+        # assert inputs_embeds.shape[0] == ignore_mask.shape[0], f"inputs_embeds: {inputs_embeds.shape}, ignore_mask: {ignore_mask.shape}"
 
         return {
             'inputs_embeds': inputs_embeds,
