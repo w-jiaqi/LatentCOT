@@ -11,6 +11,6 @@ batch_num: 32
 checkpoints_dir: checkpoints
 checkpoints_name: pool_8
 
-lr: 1.0e-6
+lr: 1.0e-5
 
 no_cache: False
