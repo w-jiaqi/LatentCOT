@@ -104,3 +104,70 @@ def test_latent_dataset():
 		'test': test_ds
 	})
 	
+def test_create_soft_labels():
+    from data.dataset import create_soft_labels
+
+    token_ids = torch.tensor([1, 5, 10, 12])
+    vocab_size = 20
+    soft_labels = create_soft_labels(token_ids, vocab_size)
+
+    assert soft_labels.shape == (4, vocab_size)
+
+    for i, idx in enumerate(token_ids):
+        assert soft_labels[i].sum().item() == 1.0
+        assert soft_labels[i][idx].item() == 1.0
+        assert torch.all(soft_labels[i][torch.arange(vocab_size) != idx] == 0)
+
+def test_create_soft_labels_expected():
+    from data.dataset import create_soft_labels
+
+    token_ids = torch.tensor([1, 5, 10, 12])
+    vocab_size = 20
+    soft_labels = create_soft_labels(token_ids, vocab_size)
+
+    expected = torch.zeros((4, vocab_size))
+    expected[0, 1] = 1.0
+    expected[1, 5] = 1.0
+    expected[2, 10] = 1.0
+    expected[3, 12] = 1.0
+
+    assert torch.allclose(soft_labels, expected)
+
+def test_create_latent_embeddings():
+    from data.dataset import create_latent_embeddings
+
+    # Simulate a vocab of size 6 and embedding dim 3
+    class DummyEmbedding(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.weight = torch.nn.Parameter(torch.arange(18, dtype=torch.float32).reshape(6, 3))
+        def forward(self, idx):
+            return self.weight[idx]
+
+    embedding = DummyEmbedding()
+    token_ids = torch.tensor([1, 2, 3, 4, 5], dtype=torch.long)
+    latent_pool = 2
+
+    pooled_embeds, soft_labels = create_latent_embeddings(token_ids, latent_pool, embedding)
+
+    # There should be 3 latents (since 5 tokens, padded to 6, pool=2)
+    assert pooled_embeds.shape == (3, 3)
+    assert soft_labels.shape == (3, 6)
+
+    # Check that the soft_labels rows sum to 1
+    assert torch.allclose(soft_labels.sum(dim=1), torch.ones(3))
+
+    # Check that the first latent uses tokens 1 and 2 with correct weights
+    weights = torch.linspace(2, 1, steps=2)
+    weights = weights / weights.sum()
+    expected_soft_label0 = torch.zeros(6)
+    expected_soft_label0[1] = weights[0]
+    expected_soft_label0[2] = weights[1]
+    assert torch.allclose(soft_labels[0], expected_soft_label0)
+
+    # Check that the last latent uses tokens 5 and 0 (padded with zero)
+    expected_soft_label2 = torch.zeros(6)
+    expected_soft_label2[5] = weights[0]
+    expected_soft_label2[0] = weights[1]
+    assert torch.allclose(soft_labels[2], expected_soft_label2)
+

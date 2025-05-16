@@ -236,6 +236,38 @@ class LatentCOTModel(nn.Module):
 
         return loss
 
+    def ce_forward(
+            self,
+            inputs_embeds: torch.Tensor,
+            attention_mask: torch.Tensor,
+            labels: torch.Tensor,  # (batch, seq_len, vocab_size)
+            ignore_mask: torch.Tensor = None  # (batch, seq_len), 1 for valid tokens, 0 to ignore
+    ) -> torch.Tensor:
+        outputs = self.model(
+            inputs_embeds=inputs_embeds,
+            attention_mask=attention_mask,
+        )
+
+        logits = outputs.logits  # (batch, seq_len, vocab_size)
+
+        batch, seq, vocab = logits.shape
+
+        logits = logits.view(-1, vocab)
+        labels = labels.view(-1, vocab)
+
+        ce_loss = torch.nn.CrossEntropyLoss(reduction='none')
+
+        per_token_loss = ce_loss(logits, labels).view(batch, seq)
+
+        if ignore_mask is not None:
+            per_token_loss = per_token_loss * ignore_mask
+            total = ignore_mask.sum()
+            loss = per_token_loss.sum() / total.clamp(min=1)
+        else:
+            loss = per_token_loss.mean()
+
+        return loss
+
     def generate(
             self, 
             inputs_ids: torch.Tensor,  # (seq_len,) or (batch, seq_len)

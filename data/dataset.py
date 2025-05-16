@@ -328,3 +328,109 @@ def get_grpo_dataset(
     dataset = dataset.remove_columns(["reasoning"])
 
     return dataset
+
+# takes (seq, ) and returns (seq, vocab_size)
+def create_soft_labels(token_ids: torch.Tensor, vocab_size: int) -> torch.Tensor:
+    labels = torch.zeros((token_ids.shape[0], vocab_size), device=token_ids.device)
+    labels.scatter_(1, token_ids.unsqueeze(1), 1.0)
+
+    return labels
+
+def create_latent_embeddings(token_ids: torch.Tensor, latent_pool: int, embedding: torch.nn.Module = None) -> Tuple[torch.Tensor, torch.Tensor]:
+    seq_len = token_ids.shape[0]
+    device = token_ids.device
+    pool = latent_pool
+
+    # Pad token_ids so seq_len is divisible by latent_pool, using zeros
+    pad_len = (pool - (seq_len % pool)) % pool
+    if pad_len > 0:
+        padded_token_ids = torch.cat([token_ids, torch.zeros((pad_len,), device=device, dtype=token_ids.dtype)])
+    else:
+        padded_token_ids = token_ids
+    num_latents = padded_token_ids.shape[0] // pool
+    tokens_grouped = padded_token_ids.view(num_latents, pool)  # (num_latents, pool)
+
+    # Linearly decaying weights: [pool, ..., 1] / sum
+    weights = torch.linspace(pool, 1, steps=pool, device=device)
+    weights = weights / weights.sum()  # (pool,)
+    weights = weights.unsqueeze(0).expand(num_latents, -1)  # (num_latents, pool)
+
+    # Embedding pooling
+    if embedding is not None:
+        embeds = embedding(tokens_grouped)  # (num_latents, pool, embed_dim)
+        pooled_embeds = (embeds * weights.unsqueeze(-1)).sum(dim=1)  # (num_latents, embed_dim)
+    else:
+        pooled_embeds = None
+
+    # Soft label pooling
+    vocab_size = embedding.weight.shape[0] if embedding is not None else int(token_ids.max().item()) + 1
+    soft_labels = torch.zeros(num_latents, vocab_size, device=device)
+    soft_labels.scatter_add_(1, tokens_grouped, weights)
+
+    return pooled_embeds, soft_labels
+
+def get_latent_cot_ce_sft_dataset(
+        dataset: Union[DatasetDict, Dataset],
+        tokenizer: LatentTokenizer,
+        embedding: torch.nn.Module,
+        latent_pool: int,
+) -> Union[DatasetDict, Dataset]:
+    def preprocess_fn(batch):
+        start_latent_col = torch.tensor(tokenizer.start_latent_id, device=embedding.device).unsqueeze(0) # (1, )
+        end_latent_col = torch.tensor(tokenizer.end_latent_id, device=embedding.device).unsqueeze(0)
+
+        start_latent_col_embed = embedding(start_latent_col) # (1, embedding_dim)
+        end_latent_col_embed = embedding(end_latent_col)
+
+        bos_col = torch.tensor(tokenizer.bos_token_id, device=embedding.device).unsqueeze(0)
+        eos_col = torch.tensor(tokenizer.eos_token_id, device=embedding.device).unsqueeze(0)
+        
+        bos_col_embed = embedding(bos_col) 
+        eos_col_embed = embedding(eos_col)
+
+        question = batch['question']
+        reasoning = batch['reasoning']
+        answer = batch['answer']
+
+        question_ids = tokenizer.encode(question, return_tensors='pt', add_special_tokens=False)[0] # remove batch dimension
+        reasoning_ids = tokenizer.encode(reasoning, return_tensors='pt', add_special_tokens=False)[0]
+        answer_ids = tokenizer.encode(answer, return_tensors='pt', add_special_tokens=False)[0]
+
+        question_embeddings = embedding(question_ids) # (seq_len, embedding_dim)
+        answer_embeddings = embedding(answer_ids)
+
+        question_length = question_ids.shape[0]
+
+        latent_reasoning_embeddings, latent_reasoning_labels = create_latent_embeddings(reasoning_ids, latent_pool)
+
+        inputs_embeds = torch.cat((
+            bos_col_embed,
+            question_embeddings,
+            start_latent_col_embed,
+            latent_reasoning_embeddings,
+            end_latent_col_embed,
+            answer_embeddings,
+            eos_col_embed
+        ), dim=0)
+
+        attention_mask = torch.ones(inputs_embeds.shape[:-1], device=embedding.device)
+
+        labels = torch.cat((
+            torch.zeros((question_length + 2, len(tokenizer)), device=embedding.device), # bos, start_latent,
+            latent_reasoning_labels,
+            create_soft_labels(end_latent_col),
+            create_soft_labels(answer_ids),
+            create_soft_labels(eos_col)
+        ), dim=0)
+
+        return {
+            'inputs_embeds': inputs_embeds,
+            'attention_mask': attention_mask,
+            'labels': labels,
+        }
+
+	# TODO: add batching
+    dataset = dataset.map(preprocess_fn, batched=False, with_indices=False, remove_columns=['question', 'reasoning', 'answer'])
+    # dataset.set_format('pt')
+
+    return dataset
