@@ -264,7 +264,7 @@ class LatentCOTModel(nn.Module):
 
         ce_loss = lambda logits, targets: -(targets * torch.log_softmax(logits, dim=-1)).sum(dim=-1)
 
-        per_token_loss = ce_loss(logits, labels).view(batch, seq)
+        per_token_loss = torch.nn.KLDivLoss(reduction="none")(logits, labels)  # (batch * seq_len, vocab)
 
         if ignore_mask is not None:
             per_token_loss = per_token_loss * ignore_mask
