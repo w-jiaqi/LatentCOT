@@ -246,6 +246,7 @@ class LatentCOTModel(nn.Module):
         inputs_embeds = inputs_embeds[:, :-1, :].contiguous()  # (batch, seq_len, dim)
         attention_mask = attention_mask[:, :-1]  # (batch, seq_len)
         labels = labels[:, 1:, :].contiguous()  # (batch, seq_len, vocab_size)
+        ignore_mask = ignore_mask[:, 1:] if ignore_mask is not None else None  # (batch, seq_len)
 
         outputs = self.model(
             inputs_embeds=inputs_embeds,
