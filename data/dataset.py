@@ -375,15 +375,17 @@ def get_latent_cot_ce_sft_dataset(
         embedding: torch.nn.Module,
         latent_pool: int,
 ) -> Union[DatasetDict, Dataset]:
+    device = embedding.weight.device
+
     def preprocess_fn(batch):
-        start_latent_col = torch.tensor(tokenizer.start_latent_id, device=embedding.device).unsqueeze(0) # (1, )
-        end_latent_col = torch.tensor(tokenizer.end_latent_id, device=embedding.device).unsqueeze(0)
+        start_latent_col = torch.tensor(tokenizer.start_latent_id, device=device).unsqueeze(0) # (1, )
+        end_latent_col = torch.tensor(tokenizer.end_latent_id, device=device).unsqueeze(0)
 
         start_latent_col_embed = embedding(start_latent_col) # (1, embedding_dim)
         end_latent_col_embed = embedding(end_latent_col)
 
-        bos_col = torch.tensor(tokenizer.bos_token_id, device=embedding.device).unsqueeze(0)
-        eos_col = torch.tensor(tokenizer.eos_token_id, device=embedding.device).unsqueeze(0)
+        bos_col = torch.tensor(tokenizer.bos_token_id, device=device).unsqueeze(0)
+        eos_col = torch.tensor(tokenizer.eos_token_id, device=device).unsqueeze(0)
         
         bos_col_embed = embedding(bos_col) 
         eos_col_embed = embedding(eos_col)
@@ -413,10 +415,10 @@ def get_latent_cot_ce_sft_dataset(
             eos_col_embed
         ), dim=0)
 
-        attention_mask = torch.ones(inputs_embeds.shape[:-1], device=embedding.device)
+        attention_mask = torch.ones(inputs_embeds.shape[:-1], device=device)
 
         labels = torch.cat((
-            torch.zeros((question_length + 2, len(tokenizer)), device=embedding.device), # bos, start_latent,
+            torch.zeros((question_length + 2, len(tokenizer)), device=device), # bos, start_latent,
             latent_reasoning_labels,
             create_soft_labels(end_latent_col),
             create_soft_labels(answer_ids),
