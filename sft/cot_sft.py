@@ -17,50 +17,35 @@ import sys, os
 
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
-from data import dataset, multiplication_dataset
+from data import dataset, gsm8k_dataset, multiplication_dataset
 import utils.utils as utils
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "-d", "--dataset", choices=["gsm8k", "4x4", "5x5"], type=str, required=True
-)
-parser.add_argument(
-    "-m", "--model", type=str, default="meta-llama/Llama-3.2-1B"
-)
-parser.add_argument("--checkpoints_dir", type=str, default="checkpoints/cot-sft")
-parser.add_argument("--epochs", type=int, required=True)
-parser.add_argument(
-    "--num_train", type=int, default=None, help="Number of training examples to use"
-)
-parser.add_argument(
-    "--checkpoints_name", type=str, default=utils.get_cur_time_string()
+    "-c", "--config", type=str, required=True
 )
 
-args = parser.parse_args()
+config = utils.get_config(parser.parse_args().config)
 
 checkpoints_path = os.path.join(
-    args.checkpoints_dir, 
-    args.dataset, 
-    args.checkpoints_name,
+    config.checkpoints_dir, 
+    "cot_sft",
+    config.dataset, 
+    config.checkpoints_name,
 )
 
-model_name = args.model
+model_name = config.model
 
 model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype="auto")
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-# load the dataset
-base_ds = None
-
-print(vars(args))
-
-if args.dataset == "gsm8k":
-    base_ds = dataset.get_gsm8k_dataset(tokenizer)
-elif args.dataset == "4x4":
-    base_ds = multiplication_dataset.get_4x4_dataset(num_train=args.num_train)
-elif args.dataset == "5x5":
-    base_ds = multiplication_dataset.get_5x5_dataset(num_train=args.num_train)
+if config.dataset == "gsm8k":
+    base_ds = gsm8k_dataset.get_gsm8k_dataset(streaming=False)
+elif config.dataset == "4x4":
+    base_ds = multiplication_dataset.get_4x4_dataset(streaming=False)
+elif config.dataset == "5x5":
+    base_ds = multiplication_dataset.get_5x5_dataset(streaming=False)
 
 ds = dataset.get_cot_sft_dataset(base_ds, tokenizer)
 
@@ -71,8 +56,8 @@ print(
 training_args = TrainingArguments(
     output_dir=checkpoints_path,
     report_to="wandb",
-    num_train_epochs=args.epochs,
-    per_device_train_batch_size=8,
+    num_train_epochs=config.epochs,
+    per_device_train_batch_size=32,
     optim="adamw_torch",
     learning_rate=1e-4,
     logging_steps=10,
