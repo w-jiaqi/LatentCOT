@@ -38,6 +38,7 @@ if device == "cpu":
 
 log_file = os.path.join(
     config.log_dir,
+    config.dataset,
     f"{config.eval_name}.log",
 )
 
@@ -94,6 +95,7 @@ for idx, example in enumerate(ds[config.split]):
         )
 
     else:
+        # the demarcation between the question and reasoning+answer is a newline
         inputs = tokenizer(example['question'] + '\n', return_tensors="pt", add_special_tokens=True).to(device)
 
         print("QUESTION: " + tokenizer.decode(inputs['input_ids'][0]))

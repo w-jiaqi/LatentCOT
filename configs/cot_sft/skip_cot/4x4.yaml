@@ -4,4 +4,3 @@ checkpoints_name: 4x4_skip_cot
 model: meta-llama/Llama-3.2-1B
 epochs: 1
 skip_cot: True
-batch_size: 64
