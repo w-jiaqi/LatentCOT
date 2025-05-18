@@ -96,7 +96,7 @@ for idx, example in enumerate(ds[config.split]):
     else:
         inputs = tokenizer(example['question'], return_tensors="pt", add_special_tokens=True).to(device)
 
-        print(tokenizer.decode("QUESTION: " + inputs['input_ids'][0]))
+        print(tokenizer.decode("QUESTION: " + tokenizer.decode(inputs['input_ids'][0])))
 
         ans_ids = model.generate(
             input_ids=inputs['input_ids'],
