@@ -2,6 +2,8 @@ import sys, os
 
 sys.path.insert(0, os.path.abspath("."))  # hack for imports
 
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
 from sft.models.latent_cot_model import LatentCOTModel
 from sft.models.latent_tokenizer import LatentTokenizer
 
@@ -36,7 +38,7 @@ if device == "cpu":
 
 log_file = os.path.join(
     config.log_dir,
-    f"{utils.string_to_filename(config.base_model)}_{config.dataset}_{utils.get_cur_time_string()}.log",
+    f"{config.eval_name}.log",
 )
 
 utils.create_dir_from_path(log_file)
@@ -46,11 +48,15 @@ logging.getLogger().addHandler(
     logging.StreamHandler(sys.stdout)
 )  # also print out logs to stdout
 
-tokenizer = LatentTokenizer(config.tokenizer)
-model = LatentCOTModel(config.base_model, tokenizer, freeze_embeddings=True).to(device)
+if config.latent:
+    tokenizer = LatentTokenizer(config.tokenizer)
 
-if config.model_pth is not None:
-    model.load_state_dict(torch.load(config.model_pth))
+    model = LatentCOTModel(config.base_model, tokenizer, freeze_embeddings=config.freeze_embeddings).to(device)
+    model.load_state_dict(torch.load(config.model))
+
+else:
+    model = AutoModelForCausalLM.from_pretrained(config.model).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(config.model)
 
 model.eval()
 
@@ -63,23 +69,38 @@ pb = tqdm(range(len(ds)))
 
 correct = 0
 
-for idx, example in enumerate(ds['valid']):
-    tokens = tokenizer(example['question'], return_tensors="pt", add_special_tokens=False).to(device)
+for idx, example in enumerate(ds[config.split]):
+    if config.latent:
+        # TODO: should this be false?
+        tokens = tokenizer(example['question'], return_tensors="pt", add_special_tokens=False).to(device)
 
-    ans_ids = model.generate(
-        inputs_ids=tokens['input_ids'],
-        input_attention_mask=tokens['attention_mask'],
-        max_new_latents=config.max_new_latents,
-        max_new_tokens=256,
-        probe_latents=config.probe_latents,
-        output_cot=False,
-        unembed_latents=config.unembed_latents,
-        dynamically_stop=config.dynamically_stop,
-    )
+        ans_ids = model.generate(
+            inputs_ids=tokens['input_ids'],
+            input_attention_mask=tokens['attention_mask'],
+            max_new_latents=config.max_new_latents,
+            max_new_tokens=256,
+            probe_latents=config.probe_latents,
+            output_cot=False,
+            unembed_latents=config.unembed_latents,
+            dynamically_stop=config.dynamically_stop,
+        )
 
-    pred_ans_string = tokenizer.decode(
-        ans_ids[0], skip_special_tokens=True, clean_up_tokenization_spaces=False
-    )
+        pred_ans_string = tokenizer.decode(
+            ans_ids[0], skip_special_tokens=True, clean_up_tokenization_spaces=False
+        )
+
+    else:
+        inputs = tokenizer(example['question'], return_tensors="pt", add_special_tokens=True).to(device)
+
+        ans_ids = model.generate(
+            input_ids=inputs['input_ids'],
+            attention_mask=inputs['attention_mask'],
+            max_new_tokens=256,
+        )
+
+        pred_ans_string = tokenizer.decode(
+            ans_ids[0], skip_special_tokens=True, clean_up_tokenization_spaces=False
+        ).split("####")[-1]
 
     pred_ans = m_utils.get_ans_from_response(pred_ans_string)
     true_ans = m_utils.get_ans_from_response(example['answer'])

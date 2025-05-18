@@ -1,0 +1,6 @@
+latent: false
+base_model: 
+model: 
+log_dir: eval/logs
+eval_name: 
+split: valid

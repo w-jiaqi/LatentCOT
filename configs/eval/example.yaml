@@ -1,9 +1,0 @@
-base_model: meta-llama/llama-3.2-1b
-tokenizer: checkpoints/latent-cot-grpo/4x4/cold_start_test/tokenizer
-model_pth: checkpoints/latent-cot-grpo/4x4/cold_start_test/model/epoch_4/model.pth
-max_new_latents: 8
-unembed_latents: true
-dynamically_stop: false
-probe_latents: true
-dataset: 4x4
-log_dir: logs
