@@ -71,7 +71,7 @@ pb = tqdm(range(len(ds)))
 
 correct = 0
 
-print("LATENT: " + config.latent)
+print("LATENT: " + str(config.latent))
 
 for idx, example in enumerate(ds[config.split]):
     if config.latent:
