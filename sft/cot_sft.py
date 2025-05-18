@@ -53,19 +53,28 @@ print(
     f"Dataset loaded: {len(ds['train'])} training examples, {len(ds['valid'])} validation examples"
 )
 
+num_train_epochs = getattr(config, "epochs", 3)
+per_device_train_batch_size = getattr(config, "per_device_train_batch_size", 32)
+learning_rate = getattr(config, "learning_rate", 1e-4)
+logging_steps = getattr(config, "logging_steps", 10)
+weight_decay = getattr(config, "weight_decay", 0.01)
+warmup_steps = getattr(config, "warmup_steps", 100)
+save_steps = getattr(config, "save_steps", 5000)
+
 training_args = TrainingArguments(
     output_dir=checkpoints_path,
     report_to="wandb",
     run_name=config.checkpoints_name,
     wandb_project="Base SFT",
-    num_train_epochs=config.epochs,
-    per_device_train_batch_size=32,
+    num_train_epochs=num_train_epochs,
+    per_device_train_batch_size=per_device_train_batch_size,
     optim="adamw_torch",
-    learning_rate=1e-4,
-    logging_steps=10,
-    weight_decay=0.01,
-    warmup_steps=100,
+    learning_rate=learning_rate,
+    logging_steps=logging_steps,
+    weight_decay=weight_decay,
+    warmup_steps=warmup_steps,
     save_strategy="steps",
+    save_steps=save_steps,
 )
 
 trainer = Trainer(

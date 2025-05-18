@@ -4,3 +4,4 @@ checkpoints_name: gsm8k_skip_cot
 model: meta-llama/Llama-3.2-1B
 epochs: 5
 skip_cot: True
+batch_size: 64
