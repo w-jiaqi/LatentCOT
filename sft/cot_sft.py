@@ -61,11 +61,12 @@ weight_decay = getattr(config, "weight_decay", 0.01)
 warmup_steps = getattr(config, "warmup_steps", 100)
 save_steps = getattr(config, "save_steps", 5000)
 
+os.environ["WANDB_PROJECT"] = "Base SFT"
+
 training_args = TrainingArguments(
     output_dir=checkpoints_path,
     report_to="wandb",
     run_name=config.checkpoints_name,
-    wandb_project="Base SFT",
     num_train_epochs=num_train_epochs,
     per_device_train_batch_size=per_device_train_batch_size,
     optim="adamw_torch",
