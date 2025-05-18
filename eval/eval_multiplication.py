@@ -43,6 +43,8 @@ log_file = os.path.join(
 
 utils.create_dir_from_path(log_file)
 
+print(f"Logging to {log_file}")
+
 logging.basicConfig(filename=log_file, level=logging.INFO)
 logging.getLogger().addHandler(
     logging.StreamHandler(sys.stdout)
@@ -51,12 +53,12 @@ logging.getLogger().addHandler(
 if config.latent:
     tokenizer = LatentTokenizer(config.tokenizer)
 
-    model = LatentCOTModel(config.base_model, tokenizer, freeze_embeddings=config.freeze_embeddings).to(device)
+    model = LatentCOTModel(config.base_latent_model, tokenizer, freeze_embeddings=config.freeze_embeddings).to(device)
     model.load_state_dict(torch.load(config.model))
 
 else:
     model = AutoModelForCausalLM.from_pretrained(config.model).to(device)
-    tokenizer = AutoTokenizer.from_pretrained(config.model)
+    tokenizer = AutoTokenizer.from_pretrained(config.tokenizer)
 
 model.eval()
 

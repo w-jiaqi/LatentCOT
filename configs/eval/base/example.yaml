@@ -1,6 +1,9 @@
+# latent or 
+
 latent: false
-base_model: 
-model: 
+base_latent_model: 
+model: meta-llama/Llama-3.2-1B 
+tokenizer: meta-llama/Llama-3.2-1B
 log_dir: eval/logs
 eval_name: 
 split: valid
