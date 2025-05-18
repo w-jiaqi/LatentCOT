@@ -105,8 +105,6 @@ for idx, example in enumerate(ds[config.split]):
             input_ids=inputs['input_ids'],
             attention_mask=inputs['attention_mask'],
             max_new_tokens=256,
-            do_sample=False,  # deterministic, usually faster than sampling
-            num_beams=1,      # disables beam search for speed
             )
 
         print("RESPONSE: " + tokenizer.decode(ans_ids[0]))
