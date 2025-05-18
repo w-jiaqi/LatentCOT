@@ -94,7 +94,7 @@ for idx, example in enumerate(ds[config.split]):
         )
 
     else:
-        inputs = tokenizer(example['question'], return_tensors="pt", add_special_tokens=True).to(device)
+        inputs = tokenizer(example['question'] + '\n', return_tensors="pt", add_special_tokens=True).to(device)
 
         print("QUESTION: " + tokenizer.decode(inputs['input_ids'][0]))
 
