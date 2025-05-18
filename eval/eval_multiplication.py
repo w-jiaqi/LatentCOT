@@ -94,11 +94,15 @@ for idx, example in enumerate(ds[config.split]):
     else:
         inputs = tokenizer(example['question'], return_tensors="pt", add_special_tokens=True).to(device)
 
+        print(tokenizer.decode(inputs['input_ids'][0]))
+
         ans_ids = model.generate(
             input_ids=inputs['input_ids'],
             attention_mask=inputs['attention_mask'],
             max_new_tokens=256,
         )
+
+        print(tokenizer.decode(ans_ids[0]))
 
         pred_ans_string = tokenizer.decode(
             ans_ids[0], skip_special_tokens=True, clean_up_tokenization_spaces=False

@@ -1,2 +1,8 @@
-model: 
-tokenizer: 
+latent: true
+model: meta-llama/Llama-3.2-1B 
+base_latent_model: 
+tokenizer: meta-llama/Llama-3.2-1B
+dataset: 
+log_dir: eval/logs
+eval_name: 
+split: valid
