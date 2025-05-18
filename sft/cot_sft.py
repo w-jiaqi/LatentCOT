@@ -50,7 +50,7 @@ elif config.dataset == "5x5":
 ds = dataset.get_cot_sft_dataset(base_ds, tokenizer, skip_cot=config.skip_cot)
 
 print(
-    f"Dataset loaded: {len(ds['train'])} training examples, {len(ds['test'])} test examples"
+    f"Dataset loaded: {len(ds['train'])} training examples, {len(ds['valid'])} validation examples"
 )
 
 training_args = TrainingArguments(
