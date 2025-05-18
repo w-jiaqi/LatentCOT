@@ -100,11 +100,14 @@ for idx, example in enumerate(ds[config.split]):
 
         print("QUESTION: " + tokenizer.decode(inputs['input_ids'][0]))
 
-        ans_ids = model.generate(
+        with torch.no_grad():
+            ans_ids = model.generate(
             input_ids=inputs['input_ids'],
             attention_mask=inputs['attention_mask'],
             max_new_tokens=256,
-        )
+            do_sample=False,  # deterministic, usually faster than sampling
+            num_beams=1,      # disables beam search for speed
+            )
 
         print("RESPONSE: " + tokenizer.decode(ans_ids[0]))
 

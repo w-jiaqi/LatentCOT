@@ -6,3 +6,9 @@ dataset:
 log_dir: eval/logs
 eval_name: 
 split: valid
+
+freeze_embeddings:
+max_new_latents: 
+probe_latents:
+unembed_latents:
+dynamically_stop: 

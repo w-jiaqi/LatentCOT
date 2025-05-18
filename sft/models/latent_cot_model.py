@@ -275,6 +275,7 @@ class LatentCOTModel(nn.Module):
 
         return loss
 
+	# don't pass in bos token because generate_latents will add it
     def generate(
             self, 
             inputs_ids: torch.Tensor,  # (seq_len,) or (batch, seq_len)
