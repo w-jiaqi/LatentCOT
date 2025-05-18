@@ -47,7 +47,7 @@ elif config.dataset == "4x4":
 elif config.dataset == "5x5":
     base_ds = multiplication_dataset.get_5x5_dataset(streaming=False)
 
-ds = dataset.get_cot_sft_dataset(base_ds, tokenizer)
+ds = dataset.get_cot_sft_dataset(base_ds, tokenizer, skip_cot=config.skip_cot)
 
 print(
     f"Dataset loaded: {len(ds['train'])} training examples, {len(ds['test'])} test examples"

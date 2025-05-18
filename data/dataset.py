@@ -36,9 +36,13 @@ def compress_embeddings(embeddings: torch.Tensor, latent_pool: int) -> Tuple[int
     return latent_seq_length, latent_embeddings
 
 # labels, input_ids, attention_mask
-def get_cot_sft_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: PreTrainedTokenizerFast) -> Union[DatasetDict, Dataset]:
+def get_cot_sft_dataset(dataset: Union[DatasetDict, Dataset], tokenizer: PreTrainedTokenizerFast, skip_cot=False) -> Union[DatasetDict, Dataset]:
     def preprocess_fn(batch):
         questions = [question + '\n' for question in batch['question']]
+
+        if skip_cot:
+            batch['reasoning'] = ['' for _ in batch['reasoning']]
+
         answers = [reasoning + ' #### ' + answer for reasoning, answer in zip(batch['reasoning'], batch['answer'])]
 
         questions_tokenized = tokenizer(questions, add_special_tokens=True) # add begin of seq token
