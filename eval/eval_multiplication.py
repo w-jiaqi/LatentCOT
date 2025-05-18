@@ -71,6 +71,8 @@ pb = tqdm(range(len(ds)))
 
 correct = 0
 
+print("LATENT: " + config.latent)
+
 for idx, example in enumerate(ds[config.split]):
     if config.latent:
         # TODO: should this be false?
@@ -94,7 +96,7 @@ for idx, example in enumerate(ds[config.split]):
     else:
         inputs = tokenizer(example['question'], return_tensors="pt", add_special_tokens=True).to(device)
 
-        print(tokenizer.decode(inputs['input_ids'][0]))
+        print(tokenizer.decode("QUESTION: " + inputs['input_ids'][0]))
 
         ans_ids = model.generate(
             input_ids=inputs['input_ids'],
@@ -102,7 +104,7 @@ for idx, example in enumerate(ds[config.split]):
             max_new_tokens=256,
         )
 
-        print(tokenizer.decode(ans_ids[0]))
+        print("RESPONSE: " + tokenizer.decode(ans_ids[0]))
 
         pred_ans_string = tokenizer.decode(
             ans_ids[0], skip_special_tokens=True, clean_up_tokenization_spaces=False
