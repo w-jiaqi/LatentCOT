@@ -56,6 +56,8 @@ print(
 training_args = TrainingArguments(
     output_dir=checkpoints_path,
     report_to="wandb",
+    run_name=config.checkpoints_name,
+    wandb_project="Base SFT",
     num_train_epochs=config.epochs,
     per_device_train_batch_size=32,
     optim="adamw_torch",
