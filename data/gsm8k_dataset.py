@@ -146,8 +146,9 @@ def get_text_to_latent_dataset(
             reasonings, return_tensors="pt", padding=True, truncation=True, max_length=576
         )
 
-        question_embeddings  = embedding(question_tokens["input_ids"])      # (B, Q_len, hidden_dim)
-        reasoning_embeddings = embedding(reasoning_tokens["input_ids"])     # (B, R_len, hidden_dim)
+        with torch.no_grad():
+            question_embeddings  = embedding(question_tokens["input_ids"]).detach()      # (B, Q_len, hidden_dim)
+            reasoning_embeddings = embedding(reasoning_tokens["input_ids"]).detach()     # (B, R_len, hidden_dim)
 
         batch_size, reasoning_length, latent_dim = reasoning_embeddings.shape
 

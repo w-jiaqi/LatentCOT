@@ -1,0 +1,16 @@
+dataset: gsm8k
+latent_pool: 4
+epochs: 5
+
+model: meta-llama/Llama-3.2-1B
+tokenizer: meta-llama/Llama-3.2-1B
+
+num_train: null # use all training examples
+batch_num: 16
+
+checkpoints_dir: checkpoints
+checkpoints_name: gsm8k_pool_4
+
+lr: 1.0e-5
+
+no_cache: True

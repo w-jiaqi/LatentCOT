@@ -92,7 +92,6 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path, lr):
 
 		for batch in progress_bar:
 			batch = {k: v.to(device) for k, v in batch.items()}
-
 			loss = model.ce_forward(**batch)
 
 			optim.zero_grad()
