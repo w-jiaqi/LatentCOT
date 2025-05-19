@@ -119,6 +119,7 @@ ds = get_latent_cot_ce_sft_dataset(
 	tokenizer=tokenizer,
 	embedding=model.latent_embedding,
 	latent_pool=config.latent_pool,
+	position_smoothing=config.position_smoothing,
 ) 
 
 print("Training model")

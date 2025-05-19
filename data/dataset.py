@@ -343,7 +343,7 @@ def create_soft_labels(token_ids: torch.Tensor, vocab_size: int) -> torch.Tensor
     labels.scatter_(2, token_ids.unsqueeze(-1), 1.0)
     return labels
 
-def create_latent_embeddings(token_ids: torch.Tensor, latent_pool: int, embedding: torch.nn.Module = None) -> Tuple[torch.Tensor, torch.Tensor]:
+def create_latent_embeddings(token_ids: torch.Tensor, latent_pool: int, embedding: torch.nn.Module, position_smoothing: bool) -> Tuple[torch.Tensor, torch.Tensor]:
     # token_ids: (batch, seq)
     if token_ids.dim() == 1:
         token_ids = token_ids.unsqueeze(0)
@@ -360,18 +360,19 @@ def create_latent_embeddings(token_ids: torch.Tensor, latent_pool: int, embeddin
     num_latents = padded_token_ids.shape[1] // pool
     tokens_grouped = padded_token_ids.view(batch_size, num_latents, pool)  # (batch, num_latents, pool)
 
-    weights = torch.linspace(pool, 1, steps=pool, device=device)
+    if position_smoothing:
+        weights = torch.linspace(pool, 1, steps=pool, device=device)
+    else:
+        weights = torch.ones(pool, device=device)
+
     weights = weights / weights.sum()  # (pool,)
     weights = weights.unsqueeze(0).unsqueeze(0)  # (1, 1, pool)
     weights = weights.expand(batch_size, num_latents, pool)  # (batch, num_latents, pool)
 
-    if embedding is not None:
-        embeds = embedding(tokens_grouped)  # (batch, num_latents, pool, embed_dim)
-        pooled_embeds = (embeds * weights.unsqueeze(-1)).sum(dim=2)  # (batch, num_latents, embed_dim)
-    else:
-        pooled_embeds = None
+    embeds = embedding(tokens_grouped)  # (batch, num_latents, pool, embed_dim)
+    pooled_embeds = (embeds * weights.unsqueeze(-1)).sum(dim=2)  # (batch, num_latents, embed_dim)
 
-    vocab_size = embedding.weight.shape[0] if embedding is not None else int(token_ids.max().item()) + 1
+    vocab_size = embedding.weight.shape[0]
     soft_labels = torch.zeros(batch_size, num_latents, vocab_size, device=device)
     flat_tokens = tokens_grouped.reshape(-1, pool)  # (batch*num_latents, pool)
     flat_weights = weights.reshape(-1, pool)        # (batch*num_latents, pool)
@@ -386,6 +387,7 @@ def get_latent_cot_ce_sft_dataset(
         tokenizer: LatentTokenizer,
         embedding: torch.nn.Module,
         latent_pool: int,
+        position_smoothing: bool,
 ) -> Union[DatasetDict, Dataset]:
     device = torch.device('cuda')
 
@@ -416,7 +418,7 @@ def get_latent_cot_ce_sft_dataset(
         answer_embeddings = embedding(answer_ids)      # (batch, alen, embed_dim)
 
         # Latent reasoning
-        latent_reasoning_embeddings, latent_reasoning_labels = create_latent_embeddings(reasoning_ids, latent_pool, embedding)
+        latent_reasoning_embeddings, latent_reasoning_labels = create_latent_embeddings(reasoning_ids, latent_pool, embedding, position_smoothing)
         # latent_reasoning_embeddings: (batch, num_latents, embed_dim)
         # latent_reasoning_labels: (batch, num_latents, vocab_size)
 

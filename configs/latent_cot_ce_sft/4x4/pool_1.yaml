@@ -9,8 +9,9 @@ num_train: null # use all training examples
 batch_num: 32
 
 checkpoints_dir: checkpoints
-checkpoints_name: pool_1
+checkpoints_name: 4x4-pool_1-no_smoothing
 
 lr: 1.0e-5
 
 no_cache: True
+position_smoothing: False

@@ -1,5 +1,5 @@
 dataset: 4x4
-latent_pool: 2
+latent_pool: 4
 epochs: 3
 
 model: meta-llama/Llama-3.2-1B
@@ -9,9 +9,9 @@ num_train: null # use all training examples
 batch_num: 32
 
 checkpoints_dir: checkpoints
-checkpoints_name: 4x4-pool_2-no_smoothing
+checkpoints_name: 4x4-pool_4-smoothing
 
 lr: 1.0e-5
 
 no_cache: True
-position_smoothing: False
+position_smoothing: True
