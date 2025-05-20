@@ -9,7 +9,7 @@
 #SBATCH --cpus-per-task=8 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=anjo0@uw.edu
-#SBATCH --output=/mmfs1/gscratch/anjo0/LatentCOT/run/logs/%j.out
+#SBATCH --output=/gscratch/ark/anjo0/LatentCOT/run/logs/%j_%x.out
 
 cd /gscratch/ark/anjo0/LatentCOT
 source env/bin/activate
