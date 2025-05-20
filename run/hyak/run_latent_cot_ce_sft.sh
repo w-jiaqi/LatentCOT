@@ -1,0 +1,16 @@
+#!/bin/bash
+#SBATCH --job-name=latent_cot_ce_sft
+#SBATCH --partition=gpu-l40
+#SBATCH --account=ark
+#SBATCH --nodes=1
+#SBATCH --mem=64G
+#SBATCH --time=96:00:00
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=8 
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=anjo0@uw.edu
+#SBATCH --output=/mmfs1/gscratch/anjo0/LatentCOT/run/logs/%j.out
+
+cd /gscratch/ark/anjo0/LatentCOT
+source env/bin/activate
+python sft/latent_cot_ce_sft.py -c $1
