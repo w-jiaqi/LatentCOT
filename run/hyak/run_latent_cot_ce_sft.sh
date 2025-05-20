@@ -3,7 +3,7 @@
 #SBATCH --partition=gpu-l40
 #SBATCH --account=ark
 #SBATCH --nodes=1
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH --time=96:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8 
