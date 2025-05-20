@@ -14,3 +14,5 @@
 cd /gscratch/ark/anjo0/LatentCOT
 source env/bin/activate
 python sft/latent_cot_ce_sft.py -c $1
+
+# Note: this script will only work for multiplication (need to change mail, output and cd argument)
