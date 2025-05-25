@@ -230,16 +230,11 @@ def get_latent_cot_freeform_dataset(
 ):
     def preprocess_fn(batch):
         question_tokens = tokenizer(batch['question'], add_special_tokens=False)
-        reasoning_tokens = tokenizer(batch['reasoning'], add_special_tokens=False)
         answer_tokens = tokenizer(batch['answer'], add_special_tokens=False)
 
         return {
             'question_ids': question_tokens['input_ids'],
             'question_attention_mask': question_tokens['attention_mask'],
-
-            'reasoning_ids': reasoning_tokens['input_ids'],
-            'reasoning_attention_mask': reasoning_tokens['attention_mask'],
-            'reasoning_labels': reasoning_tokens['input_ids'],
 
             'answer_ids': answer_tokens['input_ids'],
             'answer_attention_mask': answer_tokens['attention_mask'],
@@ -253,12 +248,10 @@ def get_latent_cot_freeform_dataset(
 
 def freeform_collate_fn(batch):
     max_question_len = max(example['question_ids'].shape[0] for example in batch)
-    max_reasoning_len = max(example['reasoning_ids'].shape[0] for example in batch)
     max_answer_len = max(example['answer_ids'].shape[0] for example in batch)
 
     for example in batch:
         question_len = example['question_ids'].shape[0]
-        reasoning_len = example['reasoning_ids'].shape[0]
         answer_len = example['answer_ids'].shape[0]
 
 		# questions
@@ -269,20 +262,6 @@ def freeform_collate_fn(batch):
         example['question_attention_mask'] = torch.cat((
             example['question_attention_mask'],
             torch.zeros((max_question_len - question_len,), dtype=example['question_attention_mask'].dtype)
-        ))
-
-        # reasoning
-        example['reasoning_ids'] = torch.cat((
-            example['reasoning_ids'],
-            torch.zeros((max_reasoning_len - reasoning_len,), dtype=example['reasoning_ids'].dtype)
-        ))
-        example['reasoning_attention_mask'] = torch.cat((
-            example['reasoning_attention_mask'],
-            torch.zeros((max_reasoning_len - reasoning_len,), dtype=example['reasoning_attention_mask'].dtype)
-        ))
-        example['reasoning_labels'] = torch.cat((
-            example['reasoning_labels'],
-            torch.full((max_reasoning_len - reasoning_len,), -100, dtype=example['reasoning_labels'].dtype)
         ))
 
 		# answers
@@ -302,10 +281,6 @@ def freeform_collate_fn(batch):
     question_ids = torch.stack([example['question_ids'] for example in batch])
     question_attention_mask = torch.stack([example['question_attention_mask'] for example in batch])
 
-    reasoning_ids = torch.stack([example['reasoning_ids'] for example in batch])
-    reasoning_attention_mask = torch.stack([example['reasoning_attention_mask'] for example in batch])
-    reasoning_labels = torch.stack([example['reasoning_labels'] for example in batch])
-
     answer_ids = torch.stack([example['answer_ids'] for example in batch])
     answer_attention_mask = torch.stack([example['answer_attention_mask'] for example in batch])
     answer_labels = torch.stack([example['answer_labels'] for example in batch])
@@ -313,10 +288,6 @@ def freeform_collate_fn(batch):
     return {
         'question_ids': question_ids,
         'question_attention_mask': question_attention_mask,
-
-        'reasoning_ids': reasoning_ids,
-        'reasoning_attention_mask': reasoning_attention_mask,
-        'reasoning_labels': reasoning_labels,
 
         'answer_ids': answer_ids,
         'answer_attention_mask': answer_attention_mask,
