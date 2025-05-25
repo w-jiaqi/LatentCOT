@@ -97,10 +97,6 @@ class LatentCOTModel(nn.Module):
             question_ids: torch.Tensor,
             question_attention_mask: torch.Tensor,
 
-            reasoning_ids: torch.Tensor,
-            reasoning_attention_mask: torch.Tensor,
-            reasoning_labels: torch.Tensor,  
-
             answer_ids: torch.Tensor,
             answer_attention_mask: torch.Tensor,
             answer_labels: torch.Tensor,
@@ -108,86 +104,20 @@ class LatentCOTModel(nn.Module):
             max_new_latents: int,
             unembed_latents: bool,
             dynamically_stop: bool,
-            answer_loss_scaling: float,
     ) -> torch.Tensor:
         batch_size = question_ids.size(0)
 
-        base_inputs_embeds, base_attention_mask, latents, latents_attention_mask = self._generate_latents(
+        base_inputs_embeds, base_attention_mask, _, _ = self._generate_latents(
             question_ids, question_attention_mask, max_new_latents,
             unembed_latents=unembed_latents,
             dynamically_stop=dynamically_stop
         )
 
-        bos_col_embed = self._expand_token(self.tokenizer.bos_token_id, batch_size)
         eos_col_embed = self._expand_token(self.tokenizer.eos_token_id, batch_size)
 
-        start_latent_col_embed = self._expand_token(self.tokenizer.start_latent_id, batch_size)
-        end_latent_col_embed = self._expand_token(self.tokenizer.end_latent_id, batch_size)
-
-        start_cot_col_embed = self._expand_token(self.tokenizer.start_cot_id, batch_size)
-        end_cot_col_embed = self._expand_token(self.tokenizer.end_cot_id, batch_size)
-
-        reasoning_embeds = self.embedding(reasoning_ids)
         answer_embeds = self.embedding(answer_ids)
 
         ones = torch.ones((batch_size, 1), dtype=base_inputs_embeds.dtype, device=base_attention_mask.device)
-        
-        reasoning_inputs_embeds = torch.cat((
-            bos_col_embed,
-            start_latent_col_embed,
-            latents,
-            end_latent_col_embed,
-            start_cot_col_embed,
-            reasoning_embeds,
-            end_cot_col_embed,
-            eos_col_embed,
-        ), dim=1)
-
-        reasoning_attention_mask = torch.cat((
-            ones,
-            ones,
-            latents_attention_mask,
-            ones,
-            ones,
-            reasoning_attention_mask,
-            ones,
-            ones,
-        ), dim=1)
-
-        reasoning_labels = torch.cat((
-            torch.full((batch_size, latents.size(1) + 3), -100, dtype=torch.long, device=reasoning_labels.device),
-            torch.full((batch_size, 1), self.tokenizer.start_cot_id, dtype=torch.long, device=reasoning_labels.device),
-            reasoning_labels,
-            torch.full((batch_size, 1), self.tokenizer.end_cot_id, dtype=torch.long, device=reasoning_labels.device),
-            torch.full((batch_size, 1), self.tokenizer.eos_token_id, dtype=torch.long, device=reasoning_labels.device),
-        ), dim=1)
-    
-            
-        """
-        reasoning_inputs_embeds = torch.cat((
-            base_inputs_embeds,
-            start_cot_col_embed,
-            reasoning_embeds,
-            end_cot_col_embed,
-            eos_col_embed,
-        ), dim=1)
-
-        reasoning_attention_mask = torch.cat((
-            base_attention_mask,
-            ones,  # start_cot token
-            reasoning_attention_mask,
-            ones,  # end_cot token
-            ones   # for eos token
-        ), dim=1)
-
-        reasoning_labels = torch.cat((
-            torch.full((batch_size, base_inputs_embeds.size(1)), -100, dtype=torch.long, device=reasoning_labels.device),
-            torch.full((batch_size, 1), self.tokenizer.start_cot_id, dtype=torch.long, device=reasoning_labels.device),
-            reasoning_labels,
-            torch.full((batch_size, 1), self.tokenizer.end_cot_id, dtype=torch.long, device=reasoning_labels.device),
-            torch.full((batch_size, 1), self.tokenizer.eos_token_id, dtype=torch.long, device=reasoning_labels.device),
-        ), dim=1)
-        """
 
         answer_inputs_embeds = torch.cat((
             base_inputs_embeds,
@@ -207,23 +137,11 @@ class LatentCOTModel(nn.Module):
             torch.full((batch_size, 1), self.tokenizer.eos_token_id, dtype=torch.long, device=answer_labels.device),
         ), dim=1)
 
-        assert reasoning_inputs_embeds.shape[:-1] == reasoning_attention_mask.shape, (
-            f"Mismatch in shapes: {reasoning_inputs_embeds.shape}, {reasoning_attention_mask.shape}"
-        )
         assert answer_inputs_embeds.shape[:-1] == answer_attention_mask.shape, (
             f"Mismatch in shapes: {answer_inputs_embeds.shape}, {answer_attention_mask.shape}"
         )
-        assert reasoning_inputs_embeds.shape[:-1] == reasoning_labels.shape, (
-            f"Mismatch in shapes: {reasoning_inputs_embeds.shape}, {reasoning_labels.shape}"
-        )
         assert answer_inputs_embeds.shape[:-1] == answer_labels.shape, (
             f"Mismatch in shapes: {answer_inputs_embeds.shape}, {answer_labels.shape}"
-        )
-
-        reasoning_outputs = self.model(
-            inputs_embeds=reasoning_inputs_embeds,
-            attention_mask=reasoning_attention_mask,
-            labels=reasoning_labels
         )
 
         answer_outputs = self.model(
@@ -232,7 +150,7 @@ class LatentCOTModel(nn.Module):
             labels=answer_labels
         )
 
-        loss = reasoning_outputs.loss + answer_loss_scaling * answer_outputs.loss
+        loss = answer_outputs.loss
 
         return loss
 

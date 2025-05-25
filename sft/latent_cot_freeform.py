@@ -75,10 +75,11 @@ ds = get_latent_cot_freeform_dataset(
 def train_model(model: LatentCOTModel, dataset, checkpoints_path):
         token_optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
 
-        dataloader = DataLoader(dataset['train'], batch_size=config.batch_num, collate_fn=freeform_collate_fn)
+        train_dataloader = DataLoader(dataset['train'], batch_size=config.batch_num, collate_fn=freeform_collate_fn)
+        val_dataloader = DataLoader(dataset['valid'], batch_size=config.batch_num, collate_fn=freeform_collate_fn)
 
         for epoch in range(config.epochs):
-                progress_bar = tqdm(dataloader, desc=f"Epoch: {epoch}")
+                progress_bar = tqdm(train_dataloader, desc=f"Epoch: {epoch}")
 
                 for idx, batch in enumerate(progress_bar):
                         batch = {k: v.to(device) for k, v in batch.items()}
@@ -88,7 +89,6 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path):
                                 max_new_latents=config.max_new_latents,
                                 unembed_latents=config.unembed_latents,
                                 dynamically_stop=config.dynamically_stop,
-                                answer_loss_scaling=config.answer_loss_scaling
                         )
 
                         progress_bar.set_postfix({'loss': loss.item()})
@@ -96,11 +96,27 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path):
                         
                         token_optimizer.zero_grad()
                         loss.backward()
-
                         token_optimizer.step()
 
                         if idx != 0 and idx % config.save_steps == 0: 
                             torch_save(model, os.path.join(checkpoints_path, f"epoch_{epoch}_{idx}", "model.pth"))
+                        
+                        if idx != 0 and idx % config.val_steps == 0:
+                                model.eval()
+                                val_losses = []
+                                with torch.no_grad():
+                                        for val_batch in val_dataloader:
+                                                val_batch = {k: v.to(device) for k, v in val_batch.items()}
+                                                val_loss = model.freeform_forward(
+                                                        **val_batch,
+                                                        max_new_latents=config.max_new_latents,
+                                                        unembed_latents=config.unembed_latents,
+                                                        dynamically_stop=config.dynamically_stop,
+                                                )
+                                                val_losses.append(val_loss.item())
+                                avg_val_loss = sum(val_losses) / len(val_losses)
+                                run.log({'val_loss': avg_val_loss})
+                                model.train()
 
                 print(f"Finished Epoch ({epoch})")
 
@@ -109,6 +125,10 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path):
         print("Finished training")
 
 model = LatentCOTModel(config.model, tokenizer, freeze_embeddings=config.freeze_embeddings).to(device)
+
+if config.model_pth:
+    print(f"Loading model from {config.model_pth}")
+    model.load_state_dict(torch.load(config.model_pth, map_location=device))
 
 print("Training model")
 
