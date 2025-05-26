@@ -1,0 +1,14 @@
+latent: true
+model: checkpoints/latent-cot-freeform/4x4/4x4-pool_4-no_smoothing/model/epoch_0_1000/model.pth
+base_latent_model: meta-llama/Llama-3.2-1B
+tokenizer: /gscratch/ark/anjo0/LatentCOT/checkpoints/latent-cot-freeform/4x4/4x4-pool_4-no_smoothing/tokenizer
+dataset: 4x4
+log_dir: eval/logs
+eval_name: 4x4-latent_freeform-pool_4
+split: valid
+
+freeze_embeddings: True
+max_new_latents: 21
+probe_latents: True
+unembed_latents: True
+dynamically_stop: False

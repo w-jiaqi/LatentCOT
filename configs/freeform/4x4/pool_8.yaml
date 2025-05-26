@@ -1,0 +1,19 @@
+dataset: 4x4
+epochs: 5
+max_new_latents: 11
+batch_num: 32
+
+model: meta-llama/Llama-3.2-1B
+model_pth: checkpoints/latent_cot_ce_sft/4x4/4x4-pool_8-no_smoothing/model/epoch_2/model.pth
+tokenizer: meta-llama/Llama-3.2-1B
+
+checkpoints_dir: checkpoints
+checkpoints_name: 4x4-pool_8-no_smoothing
+
+save_steps: 10000
+val_steps: 5000
+lr: 1.0e-6
+
+freeze_embeddings: false
+unembed_latents: true
+dynamically_stop: false
