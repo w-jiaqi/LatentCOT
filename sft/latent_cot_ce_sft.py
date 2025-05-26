@@ -9,7 +9,7 @@ import torch
 from torch.utils.data import DataLoader
 import argparse
 from utils import utils
-from data.dataset import get_latent_cot_ce_sft_dataset
+from data.dataset import get_latent_cot_ce_sft_dataset, ce_collate_fn
 from sft.models.latent_cot_model import LatentCOTModel
 from sft.models.latent_tokenizer import LatentTokenizer
 from tqdm.auto import tqdm
@@ -81,10 +81,11 @@ def train_model(model: LatentCOTModel, dataset, checkpoints_path, lr):
 	optim = torch.optim.AdamW(model.parameters(), lr=lr)
 
 	# dataloader = DataLoader(dataset['train'], collate_fn=collate_fn, batch_size=config.batch_num)
+	dataloader = DataLoader(dataset['train'], collate_fn=ce_collate_fn, batch_size=config.batch_num)
 
-	print("Don't forget to add collate_fn later")
+	# print("Don't forget to add collate_fn later")
 
-	dataloader = DataLoader(dataset['train'], batch_size=config.batch_num)
+	# dataloader = DataLoader(dataset['train'], batch_size=config.batch_num)
 	model = model.to(device)
 
 	for epoch in range(config.epochs):

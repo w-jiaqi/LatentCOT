@@ -86,25 +86,27 @@ def get_latent_cot_sft_dataset(
         bos_col = torch.tensor(tokenizer.bos_token_id).unsqueeze(0)
         eos_col = torch.tensor(tokenizer.eos_token_id).unsqueeze(0)
 
-        start_latent_col_embed = embedding(start_latent_col)
-        end_latent_col_embed = embedding(end_latent_col)
+        with torch.no_grad():
+            start_latent_col_embed = embedding(start_latent_col).detach()
+            end_latent_col_embed = embedding(end_latent_col).detach()
 
-        start_cot_col_embed = embedding(start_cot_col)
-        end_cot_col_embed = embedding(end_cot_col)
-        
-        bos_col_embed = embedding(bos_col)
-        eos_col_embed = embedding(eos_col)
-        question = batch['question'][0] # batch size of 1
-        reasoning = batch['reasoning'][0]
-        answer = batch['answer'][0]
+            start_cot_col_embed = embedding(start_cot_col).detach()
+            end_cot_col_embed = embedding(end_cot_col).detach()
+            
+            bos_col_embed = embedding(bos_col).detach()
+            eos_col_embed = embedding(eos_col).detach()
+            question = batch['question'][0] # batch size of 1
+            reasoning = batch['reasoning'][0]
+            answer = batch['answer'][0]
 
         question_ids = tokenizer.encode(question, return_tensors='pt', add_special_tokens=False)[0] # remove batch dimension
         reasoning_ids = tokenizer.encode(reasoning, return_tensors='pt', add_special_tokens=False)[0]
         answer_ids = tokenizer.encode(answer, return_tensors='pt', add_special_tokens=False)[0]
 
-        question_embeddings = embedding(question_ids)
-        reasoning_embeddings = embedding(reasoning_ids)
-        answer_embeddings = embedding(answer_ids)
+        with torch.no_grad():
+            question_embeddings = embedding(question_ids).detach()
+            reasoning_embeddings = embedding(reasoning_ids).detach()
+            answer_embeddings = embedding(answer_ids).detach()
 
         question_length = question_ids.shape[0]
         reasoning_length = reasoning_ids.shape[0]
@@ -224,6 +226,39 @@ def collate_fn(batch):
         'labels_embeds_mask': labels_embeds_mask
     }
 
+def ce_collate_fn(batch):
+    max_seq_len = max(example['inputs_embeds'].shape[0] for example in batch)
+    embed_dim = batch[0]['inputs_embeds'].shape[1] 
+    vocab_size = batch[0]['labels'].shape[1]
+
+    for example in batch:
+        seq_len = example['inputs_embeds'].shape[0]
+        pad_len = max_seq_len - seq_len
+
+        device = example['inputs_embeds'].device
+
+        # Pad inputs_embeds
+        example['inputs_embeds'] = torch.cat((
+            example['inputs_embeds'], 
+            torch.zeros((pad_len, embed_dim), device=device)
+        ))
+
+        example['attention_mask'] = torch.cat((
+            example['attention_mask'],
+            torch.zeros((pad_len,), device=device)
+        ))
+
+        example['labels'] = torch.cat((
+            example['labels'],
+            torch.zeros((pad_len, vocab_size), device=device)
+        ))
+
+    return {
+        'inputs_embeds': torch.stack([ex['inputs_embeds'] for ex in batch]),
+        'attention_mask': torch.stack([ex['attention_mask'] for ex in batch]), 
+        'labels': torch.stack([ex['labels'] for ex in batch]),
+    }
+
 def get_latent_cot_freeform_dataset(
         dataset: Union[DatasetDict, Dataset],
         tokenizer: LatentTokenizer,
@@ -340,8 +375,9 @@ def create_latent_embeddings(token_ids: torch.Tensor, latent_pool: int, embeddin
     weights = weights.unsqueeze(0).unsqueeze(0)  # (1, 1, pool)
     weights = weights.expand(batch_size, num_latents, pool)  # (batch, num_latents, pool)
 
-    embeds = embedding(tokens_grouped)  # (batch, num_latents, pool, embed_dim)
-    pooled_embeds = (embeds * weights.unsqueeze(-1)).sum(dim=2)  # (batch, num_latents, embed_dim)
+    with torch.no_grad():
+            embeds = embedding(tokens_grouped).detach()  # (batch, num_latents, pool, embed_dim)
+            pooled_embeds = (embeds * weights.unsqueeze(-1)).sum(dim=2)  # (batch, num_latents, embed_dim)
 
     vocab_size = embedding.weight.shape[0]
     soft_labels = torch.zeros(batch_size, num_latents, vocab_size, device=device)
@@ -385,8 +421,9 @@ def get_latent_cot_ce_sft_dataset(
         answer_ids = pad_and_stack(answer_ids)  # (batch, alen)
 
         # Embeddings
-        question_embeddings = embedding(question_ids)  # (batch, qlen, embed_dim)
-        answer_embeddings = embedding(answer_ids)      # (batch, alen, embed_dim)
+        with torch.no_grad():
+            question_embeddings = embedding(question_ids).detach()  # (batch, qlen, embed_dim)
+            answer_embeddings = embedding(answer_ids).detach()      # (batch, alen, embed_dim)
 
         # Latent reasoning
         latent_reasoning_embeddings, latent_reasoning_labels = create_latent_embeddings(reasoning_ids, latent_pool, embedding, position_smoothing)
@@ -399,10 +436,11 @@ def get_latent_cot_ce_sft_dataset(
         start_latent_col = torch.full((batch_size, 1), tokenizer.start_latent_id, device=device, dtype=torch.long)
         end_latent_col = torch.full((batch_size, 1), tokenizer.end_latent_id, device=device, dtype=torch.long)
 
-        bos_col_embed = embedding(bos_col)  # (batch, 1, embed_dim)
-        eos_col_embed = embedding(eos_col)
-        start_latent_col_embed = embedding(start_latent_col)
-        end_latent_col_embed = embedding(end_latent_col)
+        with torch.no_grad():
+            bos_col_embed = embedding(bos_col).detach()  # (batch, 1, embed_dim)
+            eos_col_embed = embedding(eos_col).detach()
+            start_latent_col_embed = embedding(start_latent_col).detach()
+            end_latent_col_embed = embedding(end_latent_col).detach()
 
         # Concatenate all embeddings
         inputs_embeds = torch.cat([
