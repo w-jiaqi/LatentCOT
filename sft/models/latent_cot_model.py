@@ -336,7 +336,6 @@ class LatentCOTModel(nn.Module):
             latents_attention_mask = torch.cat([latents_attention_mask, next_attention_mask], dim=1)
 
             if finished.all():
-                print(f"✅ All sequences finished at step {step_idx}")
                 break
 
         inputs_embeds = torch.cat((
