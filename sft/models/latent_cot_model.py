@@ -272,7 +272,7 @@ class LatentCOTModel(nn.Module):
         latents = torch.empty(batch_size, 0, inputs_embeds.size(-1), dtype=inputs_embeds.dtype, device=inputs_embeds.device)
         latents_attention_mask = torch.empty(batch_size, 0, dtype=attention_mask.dtype, device=attention_mask.device)
 
-        for _ in range(max_new_latents):
+        for step_idx in range(max_new_latents):
             outputs = self.model(
                 inputs_embeds=inputs_embeds if kv_cache is None else inputs_embeds[:, -1:, :],
                 attention_mask=attention_mask,
@@ -292,7 +292,7 @@ class LatentCOTModel(nn.Module):
             else:
                 next_prediction = last_layer[:, -1:, :]  # (batch, 1, dim)
 
-			# only will probe the first batch and the top 8 
+            # only will probe the first batch and the top 8 
             if probe_latents:
                 logits = self.latent_output_embedding(last_layer[:, -1:, :]) # (batch, seq, vocab)
                 topk = torch.topk(torch.softmax(logits[0][-1], dim=0), k=8)
@@ -300,12 +300,15 @@ class LatentCOTModel(nn.Module):
 
                 print("\t".join(tokens))
 
-            mse = torch.nn.functional.mse_loss(
-                end_latent_col_embed, next_prediction, reduction="none"
-            ).sum(dim=-1).squeeze(-1)  # (batch,)
-
             if dynamically_stop:
-                finished = finished | (mse < 1e-3) # we cannot do inplace modifications
+                logits = self.latent_output_embedding(last_layer[:, -1, :])  # (batch, vocab)
+                probs = torch.softmax(logits, dim=-1)
+                
+                k = 2
+                top_k_tokens = torch.topk(probs, k=k, dim=-1).indices  # (batch, k)
+                end_in_topk = (top_k_tokens == self.tokenizer.end_latent_id).any(dim=-1)  # (batch,)
+                
+                finished = finished | end_in_topk
 
                 pad_latent = torch.zeros_like(next_prediction)
                 pad_attention_mask = torch.zeros_like(attention_mask[:, -1:])
@@ -316,7 +319,7 @@ class LatentCOTModel(nn.Module):
                 next_attention_mask = torch.where(
                     finished.view(-1, 1), pad_attention_mask, torch.ones_like(attention_mask[:, -1:])
                 )
-            else: 
+            else:
                 next_attention_mask = torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device)
 
             inputs_embeds = torch.cat((
@@ -333,6 +336,7 @@ class LatentCOTModel(nn.Module):
             latents_attention_mask = torch.cat([latents_attention_mask, next_attention_mask], dim=1)
 
             if finished.all():
+                print(f"✅ All sequences finished at step {step_idx}")
                 break
 
         inputs_embeds = torch.cat((
